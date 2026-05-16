@@ -1,0 +1,31 @@
+{{ define "body" -}}
+<preview>
+  <scrollerPreview id="{{ .BodyID }}">
+    <items>
+      <grid
+          id="{{ .BodyID }}-grid"
+          columnCount="3">
+        <items>
+          {{- range .Data.Albums }}
+          <sixteenByNinePoster
+              id="album-{{ .ID }}"
+              accessibilityLabel="{{ .Title }}"
+              alwaysShowTitles="true"
+              onSelect="atvutils.loadURL('{{ $.BasePath }}/album.xml?id={{ .ID }}');">
+            <title>{{ .Title }}{{ if .Year }} ({{ .Year }}){{ end }}</title>
+            {{- if .HasCover }}
+            <image src720="{{ $.BasePath }}/cover/{{ .ID }}.jpg"
+                   src1080="{{ $.BasePath }}/cover/{{ .ID }}.jpg" />
+            {{- else }}
+            <image src720="{{ $.BasePath }}/assets/images/missing_logo.png"
+                   src1080="{{ $.BasePath }}/assets/images/missing_logo.png" />
+            {{- end }}
+            <defaultImage>{{ $.BasePath }}/assets/images/missing_logo.png</defaultImage>
+          </sixteenByNinePoster>
+          {{- end }}
+        </items>
+      </grid>
+    </items>
+  </scrollerPreview>
+</preview>
+{{- end }}

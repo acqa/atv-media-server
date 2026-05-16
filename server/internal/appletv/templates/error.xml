@@ -1,0 +1,6 @@
+{{ define "body" -}}
+<dialog id="{{ .BodyID }}">
+  <title>{{ .Data.Title }}</title>
+  <description>{{ .Data.Description }}</description>
+</dialog>
+{{- end }}

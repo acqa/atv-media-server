@@ -1,0 +1,30 @@
+{{ define "body" -}}
+<listScrollerSplit id="{{ .BodyID }}">
+  <header>
+    <simpleHeader accessibilityLabel="{{ .Data.Title }}">
+      <title>{{ .Data.Title }}{{ if .Data.Year }} ({{ .Data.Year }}){{ end }}</title>
+    </simpleHeader>
+  </header>
+  <menu>
+    <sections>
+      <menuSection>
+        <header>
+          <textDivider alignment="left" accessibilityLabel="Seasons">
+            <title>Seasons</title>
+          </textDivider>
+        </header>
+        <items>
+          {{- range .Data.Seasons }}
+          <oneLineMenuItem
+              id="season-{{ $.Data.ID }}-{{ . }}"
+              accessibilityLabel="Season {{ . }}"
+              onSelect="atvutils.loadURL('{{ $.BasePath }}/season.xml?show={{ $.Data.ID }}&amp;s={{ . }}');">
+            <label>Season {{ . }}</label>
+          </oneLineMenuItem>
+          {{- end }}
+        </items>
+      </menuSection>
+    </sections>
+  </menu>
+</listScrollerSplit>
+{{- end }}

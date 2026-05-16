@@ -1,0 +1,10 @@
+{{ define "body" -}}
+<search id="{{ .BodyID }}">
+  <header>
+    <simpleHeader accessibilityLabel="Search movies">
+      <title>Search movies</title>
+    </simpleHeader>
+  </header>
+  <baseURL>{{ .BasePath }}/search-results.xml?term=</baseURL>
+</search>
+{{- end }}

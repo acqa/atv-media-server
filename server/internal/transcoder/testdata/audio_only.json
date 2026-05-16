@@ -1,0 +1,12 @@
+{
+  "streams": [
+    {
+      "codec_name": "flac",
+      "codec_type": "audio",
+      "channels": 2
+    }
+  ],
+  "format": {
+    "duration": "245"
+  }
+}

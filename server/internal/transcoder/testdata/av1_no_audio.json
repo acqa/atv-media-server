@@ -1,0 +1,15 @@
+{
+  "streams": [
+    {
+      "codec_name": "av1",
+      "codec_type": "video",
+      "profile": "Main",
+      "level": -99,
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "format": {
+    "duration": "120.5"
+  }
+}

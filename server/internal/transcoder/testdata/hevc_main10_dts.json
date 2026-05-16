@@ -1,0 +1,20 @@
+{
+  "streams": [
+    {
+      "codec_name": "hevc",
+      "codec_type": "video",
+      "profile": "Main 10",
+      "level": "5.1",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "codec_name": "dts",
+      "codec_type": "audio",
+      "channels": 6
+    }
+  ],
+  "format": {
+    "duration": "7200"
+  }
+}

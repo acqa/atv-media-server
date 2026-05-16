@@ -1,0 +1,17 @@
+{{ define "body" -}}
+<viewWithNavigationBar
+    id="{{ .BodyID }}"
+    onNavigate="handleNavbarNavigate( event )"
+    volatile="true">
+  <navigation currentIndex="0">
+    <navigationItem id="movies" accessibilityLabel="Movies">
+      <title>Movies</title>
+      <url>{{ .BasePath }}/movies.xml</url>
+    </navigationItem>
+    <navigationItem id="series" accessibilityLabel="TV Shows">
+      <title>TV Shows</title>
+      <url>{{ .BasePath }}/series.xml</url>
+    </navigationItem>
+  </navigation>
+</viewWithNavigationBar>
+{{- end }}

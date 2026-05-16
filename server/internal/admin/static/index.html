@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ATV3 Media Server — Admin</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 720px; margin: 2em auto; padding: 0 1em; color: #222; }
+    h1 { font-size: 1.5em; }
+    table { border-collapse: collapse; margin: 1em 0; }
+    td { padding: 0.4em 1em; border-bottom: 1px solid #eee; }
+    button { padding: 0.6em 1.2em; background: #0066cc; color: #fff; border: 0; border-radius: 4px; cursor: pointer; font-size: 1em; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    .status { margin-top: 1em; padding: 0.8em; background: #f4f4f4; border-radius: 4px; font-family: monospace; font-size: 0.9em; white-space: pre; }
+    .error { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>ATV3 Media Server</h1>
+  <h2>Library</h2>
+  <table>
+    <tr><td>Movies</td><td id="stat-movies">—</td></tr>
+    <tr><td>TV Shows</td><td id="stat-series">—</td></tr>
+    <tr><td>Artists</td><td id="stat-artists">—</td></tr>
+  </table>
+
+  <h2>Scan</h2>
+  <button id="scan-btn">Start scan</button>
+  <div class="status" id="scan-status">Loading…</div>
+
+  <script>
+    async function fetchStats() {
+      const r = await fetch('/api/stats');
+      if (!r.ok) return;
+      const s = await r.json();
+      document.getElementById('stat-movies').textContent = s.movies;
+      document.getElementById('stat-series').textContent = s.series;
+      document.getElementById('stat-artists').textContent = s.artists;
+    }
+    async function fetchScanStatus() {
+      const r = await fetch('/api/scan/status');
+      if (!r.ok) {
+        document.getElementById('scan-status').textContent = 'failed to fetch status';
+        return;
+      }
+      const s = await r.json();
+      const el = document.getElementById('scan-status');
+      el.textContent = JSON.stringify(s, null, 2);
+      el.classList.toggle('error', !!s.error);
+      document.getElementById('scan-btn').disabled = !!s.running;
+    }
+    document.getElementById('scan-btn').addEventListener('click', async () => {
+      const r = await fetch('/api/scan', { method: 'POST' });
+      if (r.status === 409) {
+        alert('Scan is already running');
+        return;
+      }
+      await fetchScanStatus();
+    });
+    fetchStats();
+    fetchScanStatus();
+    setInterval(() => { fetchStats(); fetchScanStatus(); }, 3000);
+  </script>
+</body>
+</html>
