@@ -115,6 +115,8 @@ func ScanSeriesAndUpsert(ctx context.Context, root string, store *storage.Store,
 			} else {
 				row.VideoCodec = info.VideoCodec
 				row.AudioCodec = info.AudioCodec
+				row.VideoHeight = info.Height
+				row.AudioChannels = info.AudioChannels
 				row.AudioCount = info.AudioCount
 				row.Duration = info.DurationSec
 				row.NeedsTranscode = transcoder.ChooseMode(info) != transcoder.ModeRemux

@@ -19,10 +19,14 @@ func FormatDuration(seconds int) string {
 	return fmt.Sprintf("%dm", m)
 }
 
-// FormatQuality joins resolution + video/audio codec info into a single string
-// like "1080p · H.264 · AC3". Pass videoHeight=0 when unknown (resolution part
-// is omitted). Returns empty string when nothing is known.
-func FormatQuality(videoHeight int, videoCodec, audioCodec string) string {
+// FormatQuality joins resolution + video/audio codec + channel layout into a
+// single string like "1080p · H.264 · AC3 5.1". Any of the inputs may be zero/
+// empty when unknown — corresponding parts are omitted. Returns empty when
+// nothing is known.
+//
+// audioChannels is rendered as "5.1"/"7.1"/"Mono" — Stereo (2) is implicit and
+// stays unshown to avoid noise.
+func FormatQuality(videoHeight int, videoCodec, audioCodec string, audioChannels int) string {
 	var parts []string
 	switch {
 	case videoHeight >= 1080:
@@ -41,20 +45,45 @@ func FormatQuality(videoHeight int, videoCodec, audioCodec string) string {
 	default:
 		parts = append(parts, strings.ToUpper(videoCodec))
 	}
-	switch strings.ToLower(audioCodec) {
-	case "":
-	case "ac3":
-		parts = append(parts, "AC3")
-	case "eac3":
-		parts = append(parts, "E-AC3")
-	case "aac":
-		parts = append(parts, "AAC")
-	case "dts":
-		parts = append(parts, "DTS")
-	default:
-		parts = append(parts, strings.ToUpper(audioCodec))
+	if audio := formatAudio(audioCodec, audioChannels); audio != "" {
+		parts = append(parts, audio)
 	}
 	return strings.Join(parts, " · ")
+}
+
+// formatAudio combines codec + channel layout, e.g. "AC3 5.1", "AAC", "5.1".
+func formatAudio(codec string, channels int) string {
+	var codecLabel string
+	switch strings.ToLower(codec) {
+	case "":
+	case "ac3":
+		codecLabel = "AC3"
+	case "eac3":
+		codecLabel = "E-AC3"
+	case "aac":
+		codecLabel = "AAC"
+	case "dts":
+		codecLabel = "DTS"
+	default:
+		codecLabel = strings.ToUpper(codec)
+	}
+	var chLabel string
+	switch {
+	case channels >= 8:
+		chLabel = "7.1"
+	case channels >= 6:
+		chLabel = "5.1"
+	case channels == 1:
+		chLabel = "Mono"
+	}
+	switch {
+	case codecLabel != "" && chLabel != "":
+		return codecLabel + " " + chLabel
+	case codecLabel != "":
+		return codecLabel
+	default:
+		return chLabel
+	}
 }
 
 // RatingPercent maps a 0..10 TMDb rating to the 0..100 percentage that the

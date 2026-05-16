@@ -32,6 +32,8 @@ type EpisodeRow struct {
 	Duration       int
 	VideoCodec     string
 	AudioCodec     string
+	VideoHeight    int // pixels (1080/720/...); 0 = unknown
+	AudioChannels  int // stream channels (2/6/8); 0 = unknown
 	AudioCount     int
 	NeedsTranscode bool
 	UpdatedAt      time.Time
@@ -41,7 +43,8 @@ const seriesColumns = `id, path, title, year, description, poster_path, backdrop
 	rating, tmdb_id, updated_at`
 
 const episodeColumns = `id, series_id, season, episode, path, title, description,
-	still_path, duration, video_codec, audio_codec, audio_count, needs_transcode, updated_at`
+	still_path, duration, video_codec, audio_codec, video_height, audio_channels,
+	audio_count, needs_transcode, updated_at`
 
 // UpsertSeries inserts or updates a series row.
 func (s *Store) UpsertSeries(r SeriesRow) error {
@@ -106,7 +109,7 @@ func (s *Store) UpsertEpisode(r EpisodeRow) error {
 	}
 	_, err := s.db.Exec(`
 		INSERT INTO episodes (`+episodeColumns+`)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			series_id = excluded.series_id,
 			season = excluded.season,
@@ -118,11 +121,14 @@ func (s *Store) UpsertEpisode(r EpisodeRow) error {
 			duration = excluded.duration,
 			video_codec = excluded.video_codec,
 			audio_codec = excluded.audio_codec,
+			video_height = excluded.video_height,
+			audio_channels = excluded.audio_channels,
 			audio_count = excluded.audio_count,
 			needs_transcode = excluded.needs_transcode,
 			updated_at = excluded.updated_at
 	`, r.ID, r.SeriesID, r.Season, r.Episode, r.Path, r.Title, r.Description,
-		r.StillPath, r.Duration, r.VideoCodec, r.AudioCodec, r.AudioCount, r.NeedsTranscode, r.UpdatedAt)
+		r.StillPath, r.Duration, r.VideoCodec, r.AudioCodec, r.VideoHeight, r.AudioChannels,
+		r.AudioCount, r.NeedsTranscode, r.UpdatedAt)
 	return err
 }
 
@@ -197,6 +203,7 @@ func scanEpisode(row rowScanner) (EpisodeRow, error) {
 	var r EpisodeRow
 	err := row.Scan(&r.ID, &r.SeriesID, &r.Season, &r.Episode, &r.Path, &r.Title,
 		&r.Description, &r.StillPath, &r.Duration, &r.VideoCodec, &r.AudioCodec,
+		&r.VideoHeight, &r.AudioChannels,
 		&r.AudioCount, &r.NeedsTranscode, &r.UpdatedAt)
 	return r, err
 }

@@ -8,7 +8,7 @@
   {{- end }}
   <defaultImage>resource://Poster.png</defaultImage>
 
-  {{- if or .Data.DurationStr .Data.QualityStr .Data.HasRating }}
+  {{- if or .Data.DurationStr .Data.QualityStr .Data.Badges .Data.HasRating }}
   <table>
     <columnDefinitions>
       <columnDefinition width="50" alignment="left">
@@ -19,7 +19,17 @@
       {{- if .Data.DurationStr }}
       <row><label>{{ .Data.DurationStr }}</label></row>
       {{- end }}
-      {{- if .Data.QualityStr }}
+      {{- if .Data.Badges }}
+      <row>
+        <mediaBadges>
+          <additionalMediaBadges>
+            {{- range $idx, $name := .Data.Badges }}
+            <urlBadge insertIndex="{{ $idx }}" required="true" src="{{ $.BasePath }}/assets/badges/{{ $name }}" />
+            {{- end }}
+          </additionalMediaBadges>
+        </mediaBadges>
+      </row>
+      {{- else if .Data.QualityStr }}
       <row><label>{{ .Data.QualityStr }}</label></row>
       {{- end }}
       {{- if .Data.HasRating }}

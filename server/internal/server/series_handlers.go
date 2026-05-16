@@ -64,9 +64,10 @@ type EpisodePage struct {
 	Title       string
 	Description string
 	HasStill    bool
-	DurationStr string // "23m"; empty when unknown
-	QualityStr  string // "1080p · H.264 · AC3"; empty when unknown
-	AudioTracks []int  // 0..N-1 — drives "Audio N" buttons
+	DurationStr string   // "23m"; empty when unknown
+	QualityStr  string   // "1080p · H.264 · AC3"; empty when unknown
+	Badges      []string // PNG filenames under /assets/badges/; empty when unknown
+	AudioTracks []int    // 0..N-1 — drives "Audio N" buttons
 }
 
 func seriesViewFrom(r storage.SeriesRow) SeriesView {
@@ -186,7 +187,8 @@ func episodeHandler(gen *appletv.XMLGenerator, store *storage.Store) http.Handle
 			ID: e.ID, ShowTitle: show.Title, Season: e.Season, Episode: e.Episode,
 			Title: e.Title, Description: e.Description, HasStill: e.StillPath != "",
 			DurationStr: FormatDuration(e.Duration),
-			QualityStr:  FormatQuality(0, e.VideoCodec, e.AudioCodec),
+			QualityStr:  FormatQuality(e.VideoHeight, e.VideoCodec, e.AudioCodec, e.AudioChannels),
+			Badges:      BadgeFilenames(e.VideoHeight, e.VideoCodec, e.AudioCodec, e.AudioChannels),
 			AudioTracks: audioRange(e.AudioCount),
 		})
 	}

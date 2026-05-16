@@ -27,27 +27,30 @@ func TestFormatDuration(t *testing.T) {
 
 func TestFormatQuality(t *testing.T) {
 	cases := []struct {
-		name   string
-		height int
-		vCodec string
-		aCodec string
-		want   string
+		name     string
+		height   int
+		vCodec   string
+		aCodec   string
+		channels int
+		want     string
 	}{
-		{"empty", 0, "", "", ""},
-		{"only_codec", 0, "h264", "", "H.264"},
-		{"only_audio", 0, "", "ac3", "AC3"},
-		{"full_1080", 1080, "h264", "ac3", "1080p · H.264 · AC3"},
-		{"720_hevc_aac", 720, "hevc", "aac", "720p · HEVC · AAC"},
-		{"sd", 480, "h264", "aac", "SD · H.264 · AAC"},
-		{"eac3", 1080, "h264", "eac3", "1080p · H.264 · E-AC3"},
-		{"unknown_codec_uppercased", 720, "av1", "opus", "720p · AV1 · OPUS"},
-		{"h265_alias", 1080, "h265", "dts", "1080p · HEVC · DTS"},
+		{"empty", 0, "", "", 0, ""},
+		{"only_codec", 0, "h264", "", 0, "H.264"},
+		{"only_audio", 0, "", "ac3", 0, "AC3"},
+		{"full_1080_stereo", 1080, "h264", "ac3", 2, "1080p · H.264 · AC3"},
+		{"full_1080_5_1", 1080, "h264", "ac3", 6, "1080p · H.264 · AC3 5.1"},
+		{"full_1080_7_1", 1080, "h264", "eac3", 8, "1080p · H.264 · E-AC3 7.1"},
+		{"720_hevc_aac", 720, "hevc", "aac", 0, "720p · HEVC · AAC"},
+		{"sd_mono", 480, "h264", "aac", 1, "SD · H.264 · AAC Mono"},
+		{"channels_without_codec", 1080, "", "", 6, "1080p · 5.1"},
+		{"unknown_codec_uppercased", 720, "av1", "opus", 6, "720p · AV1 · OPUS 5.1"},
+		{"h265_alias", 1080, "h265", "dts", 0, "1080p · HEVC · DTS"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := FormatQuality(c.height, c.vCodec, c.aCodec); got != c.want {
-				t.Errorf("FormatQuality(%d, %q, %q) = %q, want %q",
-					c.height, c.vCodec, c.aCodec, got, c.want)
+			if got := FormatQuality(c.height, c.vCodec, c.aCodec, c.channels); got != c.want {
+				t.Errorf("FormatQuality(%d, %q, %q, %d) = %q, want %q",
+					c.height, c.vCodec, c.aCodec, c.channels, got, c.want)
 			}
 		})
 	}

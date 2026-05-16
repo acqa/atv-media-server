@@ -37,10 +37,11 @@ type MoviePage struct {
 	HasBackdrop   bool
 	Rating        float64
 	HasRating     bool
-	RatingPercent int    // 0..100 for the <starRating> widget
-	DurationStr   string // "1h 47m"; empty when unknown
-	QualityStr    string // "1080p · H.264 · AC3"; empty when unknown
-	AudioTracks   []int  // 0..N-1 — drives the "Audio N" buttons in the detail UI
+	RatingPercent int      // 0..100 for the <starRating> widget
+	DurationStr   string   // "1h 47m"; empty when unknown
+	QualityStr    string   // "1080p · H.264 · AC3"; empty when unknown
+	Badges        []string // PNG filenames under /assets/badges/; empty when unknown
+	AudioTracks   []int    // 0..N-1 — drives the "Audio N" buttons in the detail UI
 }
 
 // PlayPage is the payload for player.xml.
@@ -124,9 +125,9 @@ func movieHandler(gen *appletv.XMLGenerator, store *storage.Store) http.HandlerF
 			HasRating:     m.Rating > 0,
 			RatingPercent: RatingPercent(m.Rating),
 			DurationStr:   FormatDuration(m.Duration),
-			// videoHeight is not stored yet — populated in step #06 (media badges)
-			QualityStr:  FormatQuality(0, m.VideoCodec, m.AudioCodec),
-			AudioTracks: audioRange(m.AudioCount),
+			QualityStr:    FormatQuality(m.VideoHeight, m.VideoCodec, m.AudioCodec, m.AudioChannels),
+			Badges:        BadgeFilenames(m.VideoHeight, m.VideoCodec, m.AudioCodec, m.AudioChannels),
+			AudioTracks:   audioRange(m.AudioCount),
 		})
 	}
 }

@@ -171,6 +171,7 @@ func TestMovieHandler_RendersFullDetails(t *testing.T) {
 		ID: "xyz000abc111", Title: "Blade Runner", Year: 1982,
 		Description: "Detective hunts replicants", PosterPath: "/p.jpg", Rating: 8.1,
 		Duration: 7020, VideoCodec: "h264", AudioCodec: "ac3",
+		VideoHeight: 1080, AudioChannels: 6,
 	})
 	srv := httptest.NewServer(env.mux)
 	t.Cleanup(srv.Close)
@@ -190,7 +191,14 @@ func TestMovieHandler_RendersFullDetails(t *testing.T) {
 		`<image style="moviePoster">`,
 		"/poster/xyz000abc111.jpg?type=poster&amp;size=w780",
 		"<label>1h 57m</label>",
-		"<label>H.264 · AC3</label>",
+		"<mediaBadges>",
+		"<additionalMediaBadges>",
+		`src="https://appletv.redbull.tv/assets/badges/1080.png"`,
+		`src="https://appletv.redbull.tv/assets/badges/h264.png"`,
+		`src="https://appletv.redbull.tv/assets/badges/ac3.png"`,
+		`src="https://appletv.redbull.tv/assets/badges/6.png"`,
+		`insertIndex="0"`,
+		`insertIndex="3"`,
 		"<starRating>",
 		"<percentage>81</percentage>",
 		`<actionButton`,
@@ -225,6 +233,28 @@ func TestMovieHandler_NoDescriptionFallback(t *testing.T) {
 	}
 	if !strings.Contains(s, "<defaultImage>resource://Poster.png</defaultImage>") {
 		t.Errorf("expected <defaultImage> fallback:\n%s", s)
+	}
+}
+
+func TestMovieHandler_QualityFallbackWhenNoBadges(t *testing.T) {
+	env := newTestEnv(t)
+	// Codecs we don't map (av1, vorbis) — Badges helper returns empty for them,
+	// so the table should fall back to a text <label>.
+	upsertMovie(t, env.store, storage.MediaRow{
+		ID: "fb0000fb0000", Title: "Avant-garde", VideoCodec: "av1", AudioCodec: "vorbis",
+	})
+	srv := httptest.NewServer(env.mux)
+	t.Cleanup(srv.Close)
+
+	resp, _ := http.Get(srv.URL + "/movie.xml?id=fb0000fb0000")
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	if strings.Contains(s, "<mediaBadges>") {
+		t.Errorf("expected no badges for unmapped codecs:\n%s", s)
+	}
+	if !strings.Contains(s, "<label>AV1 · VORBIS</label>") {
+		t.Errorf("expected text quality fallback:\n%s", s)
 	}
 }
 
