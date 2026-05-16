@@ -3,7 +3,10 @@
 COMPOSE ?= docker compose
 SERVICE ?= media-server
 
-.PHONY: help up down restart rebuild logs ps shell build test fmt vet \
+GOLANGCI_LINT_VERSION ?= v2.1.0
+GOLANGCI_LINT ?= $(shell go env GOPATH)/bin/golangci-lint
+
+.PHONY: help up down restart rebuild logs ps shell build test fmt vet lint lint-install \
         env certs clean-cache clean-data clean-apple scan
 
 help: ## Show list of targets
@@ -61,3 +64,10 @@ fmt: ## go fmt
 
 vet: ## go vet
 	cd server && go vet ./...
+
+lint-install: ## Install pinned golangci-lint (override with GOLANGCI_LINT_VERSION=...)
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+lint: ## Run golangci-lint (auto-installs if missing)
+	@test -x $(GOLANGCI_LINT) || $(MAKE) lint-install
+	cd server && $(GOLANGCI_LINT) run ./...
