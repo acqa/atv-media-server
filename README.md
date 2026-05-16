@@ -1,6 +1,6 @@
 # ATV3 Media Server
 
-Self-hosted media server for **Apple TV 3** (model A1469) running iOS 7.9. Impersonates the **Red Bull TV** app via DNS hijacking, shows a catalog of local movies / TV shows / music with metadata from TMDb, and serves an HLS stream with automatic transcoding of incompatible formats.
+Self-hosted media server for **Apple TV 3** (model A1469) running iOS 7.9. Impersonates the **Red Bull TV** app via DNS hijacking, shows a catalog of local movies and TV shows with metadata from TMDb, and serves an HLS stream with automatic transcoding of incompatible formats.
 
 Based on [ghokun/appletv3-iptv](https://github.com/ghokun/appletv3-iptv) — the XML templates and JS framework come from there, proven on real ATV3 hardware.
 
@@ -47,25 +47,19 @@ media/
 │   │   └── The.Matrix.1999.1080p.mkv
 │   └── Inception (2010)/
 │       └── Inception.2010.mp4
-├── series/
-│   └── Breaking Bad/
-│       ├── Season 1/
-│       │   ├── S01E01 Pilot.mkv
-│       │   └── S01E02.mkv
-│       └── Season 2/
-│           └── S02E01.mkv
-└── music/
-    └── Pink Floyd/
-        └── The Dark Side of the Moon/
-            ├── 01 - Speak to Me.flac
-            └── cover.jpg
+└── series/
+    └── Breaking Bad/
+        ├── Season 1/
+        │   ├── S01E01 Pilot.mkv
+        │   └── S01E02.mkv
+        └── Season 2/
+            └── S02E01.mkv
 ```
 
 Name parsing rules:
 
 - Movies: `Name (Year)` in the folder or file name. Year in parentheses or just `Name.Year.tag`.
 - TV shows: season folder named `Season N` / `S01`; file name must contain `SxxExx`, `1x02` or `Season X Episode Y`.
-- Music: `Artist/Album/Track` hierarchy. ID3 tags (if present) override the file name. Cover art — `cover.jpg`/`folder.jpg` in the album folder.
 
 ## Quick start
 
@@ -83,12 +77,22 @@ cp .env.example .env
 docker compose up -d
 ```
 
-On first run the server will:
+On first run the stack will:
 
 1. Generate a self-signed certificate for `appletv.redbull.tv` in `./certs/`.
 2. Create the SQLite DB `./data/metadata.db`.
 3. Scan the library, and if a TMDb key is set, pull posters and descriptions.
-4. Bring up HTTP/HTTPS on 80/443, the web admin on 8080, and CoreDNS on 53.
+4. Bring up HTTP/HTTPS on 80/443 and the web admin on 8080 (the `media-server` container), plus dnsmasq on 53 (the `dns` container) hijacking `appletv.redbull.tv` to `MEDIA_SERVER_IP`.
+
+Or, equivalently, via the `Makefile`:
+
+```bash
+make env    # copy .env.example -> .env (only if missing)
+make up     # docker compose up -d
+make logs   # tail media-server logs
+make scan   # trigger a library rescan
+make help   # list all targets
+```
 
 ## ATV3 setup
 
@@ -104,7 +108,7 @@ On first run the server will:
 
 If `ADMIN_USER`/`ADMIN_PASS` are set in `.env`, the admin is available at `http://<MEDIA_SERVER_IP>:8080` with Basic Auth. Currently provides:
 
-- Library counters (movies / TV shows / artists).
+- Library counters (movies / TV shows).
 - A "Run scan" button and the current scan status.
 
 Without `ADMIN_USER`/`ADMIN_PASS`, the admin is disabled.
@@ -118,19 +122,19 @@ Without `ADMIN_USER`/`ADMIN_PASS`, the admin is disabled.
 | `BASE_HOST` | `appletv.redbull.tv` | Host we impersonate |
 | `TMDB_API_KEY` | empty | TMDb API key. Without it — no metadata. |
 | `ADMIN_USER`/`ADMIN_PASS` | empty | Web admin credentials. Both empty → admin disabled. |
-| `ADMIN_PORT` | `8080` | Admin port |
+| `ADMIN_PORT` | `8080` | Admin port (read by docker-compose; not set in `.env.example`). |
+| `HTTP_PORT` / `HTTPS_PORT` | `80` / `443` | Server ports inside the container (mapped 1:1 to the host). |
 | `TRANSCODE_CACHE_MAX_GB` | `50` | HLS segment cache limit. When exceeded, LRU eviction runs. |
 
 ## What the server does on Play
 
 1. ATV3 requests `/play.xml?id=...`.
-2. The server finds the file in the DB (`movies`, `episodes` or `tracks`).
+2. The server finds the file in the DB (`movies` or `episodes`).
 3. Runs [ffprobe](https://ffmpeg.org/ffprobe.html) to determine codecs (if not done before).
 4. If the file is `h264 ≤ High@4.1 + (aac|ac3|eac3)` → **remux**: ffmpeg wraps the stream into HLS without re-encoding (fast, ~real-time × N).
 5. Otherwise → **transcode**: ffmpeg re-encodes to H.264 High@4.1 + AAC stereo 192k (5 Mbps, slow, CPU-heavy).
-6. Audio files (FLAC/MP3/M4A) are transcoded to AAC stereo HLS via a separate branch.
-7. The result is cached in `/data/transcoded/<id>/`. On a repeated Play — served from cache.
-8. Once an hour an LRU sweeper trims anything exceeding `TRANSCODE_CACHE_MAX_GB`.
+6. The result is cached in `/data/transcoded/<id>/`. On a repeated Play — served from cache.
+7. Once an hour an LRU sweeper trims anything exceeding `TRANSCODE_CACHE_MAX_GB`.
 
 ## Project structure
 
@@ -143,27 +147,32 @@ Without `ADMIN_USER`/`ADMIN_PASS`, the admin is disabled.
 │   │   ├── appletv/    # XML renderer + templates
 │   │   ├── certs/      # SSL auto-generation
 │   │   ├── config/
-│   │   ├── library/    # scanners (movies/shows/music) + pipeline
+│   │   ├── library/    # scanners (movies/shows) + pipeline
 │   │   ├── logging/
 │   │   ├── metadata/   # TMDb client
 │   │   ├── server/     # HTTP/HTTPS + handlers
 │   │   ├── storage/    # SQLite + migrations
 │   │   └── transcoder/ # ffmpeg/ffprobe wrappers + GC
 │   └── Dockerfile
-├── coredns/Corefile    # DNS for hijacking appletv.redbull.tv
-├── docker-compose.yml
-├── plans/              # per-phase implementation plans
-├── PLAN.md / PROGRESS.md
-└── rep.md              # original spec
+├── coredns/Corefile    # legacy CoreDNS config (current stack uses dnsmasq, see docker-compose.yml)
+├── scripts/gen-cert.sh # standalone helper to generate the self-signed cert
+├── docker-compose.yml  # media-server + dnsmasq services
+├── Makefile            # up / down / logs / scan / lint / test ...
+├── .env.example
+└── LICENSE             # Apache 2.0
 ```
 
 ## Operations
 
-- **Restart**: `docker compose restart media-server`. SSL/DB survive.
-- **Logs**: `docker compose logs -f media-server` or `./data/logs/YYYY-MM-DD.log`.
-- **Full rebuild**: `docker compose up -d --build`.
-- **Force rescan**: POST to `https://<host>/api/library/scan` or the button in the admin.
-- **Clear transcode cache**: `rm -rf data/transcoded && docker compose restart media-server`.
+Either run `docker compose` directly or use the `Makefile` wrappers:
+
+- **Restart**: `make restart` (or `docker compose restart media-server`). SSL/DB survive.
+- **Logs**: `make logs` (or `docker compose logs -f media-server`) — also written to `./data/logs/YYYY-MM-DD.log`.
+- **Full rebuild**: `make rebuild` (or `docker compose up -d --build`).
+- **Force rescan**: `make scan` (POSTs to `https://localhost/api/library/scan`) or the button in the admin.
+- **Clear transcode cache**: `make clean-cache && make restart`.
+- **Reset everything (DB + cache)**: `make clean-data` (irreversible).
+- **Dev loop**: `make fmt`, `make vet`, `make lint`, `make test`, `make build`.
 
 ## Troubleshooting
 
@@ -177,7 +186,9 @@ Without `ADMIN_USER`/`ADMIN_PASS`, the admin is disabled.
 
 ## Links
 
-- Detailed spec: [rep.md](rep.md)
-- Implementation plan: [PLAN.md](PLAN.md), [PROGRESS.md](PROGRESS.md)
 - Reference project: [ghokun/appletv3-iptv](https://github.com/ghokun/appletv3-iptv)
 - TMDb API: <https://developer.themoviedb.org/docs>
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE).
