@@ -26,12 +26,16 @@ type SeriesPage struct {
 
 // ShowPage is the payload for show.xml.
 type ShowPage struct {
-	ID          string
-	Title       string
-	Year        int
-	Description string
-	HasPoster   bool
-	Seasons     []int
+	ID            string
+	Title         string
+	Year          int
+	Description   string
+	HasPoster     bool
+	HasBackdrop   bool
+	Rating        float64
+	HasRating     bool
+	RatingPercent int
+	Seasons       []int
 }
 
 // SeasonPage is the payload for season.xml.
@@ -43,11 +47,12 @@ type SeasonPage struct {
 
 // EpisodeView projects storage.EpisodeRow for grid templates.
 type EpisodeView struct {
-	ID       string
-	Season   int
-	Episode  int
-	Title    string
-	HasStill bool
+	ID          string
+	Season      int
+	Episode     int
+	Title       string
+	HasStill    bool
+	DurationStr string // "23m"; empty when unknown
 }
 
 // EpisodePage is the payload for episode.xml.
@@ -59,7 +64,9 @@ type EpisodePage struct {
 	Title       string
 	Description string
 	HasStill    bool
-	AudioTracks []int // 0..N-1 — drives "Audio N" buttons
+	DurationStr string // "23m"; empty when unknown
+	QualityStr  string // "1080p · H.264 · AC3"; empty when unknown
+	AudioTracks []int  // 0..N-1 — drives "Audio N" buttons
 }
 
 func seriesViewFrom(r storage.SeriesRow) SeriesView {
@@ -73,6 +80,7 @@ func episodeViewFrom(r storage.EpisodeRow) EpisodeView {
 	return EpisodeView{
 		ID: r.ID, Season: r.Season, Episode: r.Episode,
 		Title: r.Title, HasStill: r.StillPath != "",
+		DurationStr: FormatDuration(r.Duration),
 	}
 }
 
@@ -120,8 +128,12 @@ func showHandler(gen *appletv.XMLGenerator, store *storage.Store) http.HandlerFu
 		}
 		gen.Render(w, r, "show.xml", ShowPage{
 			ID: s.ID, Title: s.Title, Year: s.Year, Description: s.Description,
-			HasPoster: s.PosterPath != "" || s.BackdropPath != "",
-			Seasons:   seasons,
+			HasPoster:     s.PosterPath != "" || s.BackdropPath != "",
+			HasBackdrop:   s.BackdropPath != "",
+			Rating:        s.Rating,
+			HasRating:     s.Rating > 0,
+			RatingPercent: RatingPercent(s.Rating),
+			Seasons:       seasons,
 		})
 	}
 }
@@ -173,6 +185,8 @@ func episodeHandler(gen *appletv.XMLGenerator, store *storage.Store) http.Handle
 		gen.Render(w, r, "episode.xml", EpisodePage{
 			ID: e.ID, ShowTitle: show.Title, Season: e.Season, Episode: e.Episode,
 			Title: e.Title, Description: e.Description, HasStill: e.StillPath != "",
+			DurationStr: FormatDuration(e.Duration),
+			QualityStr:  FormatQuality(0, e.VideoCodec, e.AudioCodec),
 			AudioTracks: audioRange(e.AudioCount),
 		})
 	}
