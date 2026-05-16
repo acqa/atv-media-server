@@ -30,13 +30,13 @@ func main() {
 
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "config error:", err)
+		_, _ = fmt.Fprintln(os.Stderr, "config error:", err)
 		os.Exit(2)
 	}
 
 	if cfg.LogToFile {
 		if err := logging.EnableFile(cfg.LoggingPath); err != nil {
-			fmt.Fprintln(os.Stderr, "log file:", err)
+			_, _ = fmt.Fprintln(os.Stderr, "log file:", err)
 			os.Exit(2)
 		}
 	}

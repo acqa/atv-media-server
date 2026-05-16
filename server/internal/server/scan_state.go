@@ -37,14 +37,6 @@ func NewScanState(run ScanFunc) *ScanState {
 	return &ScanState{runFn: run}
 }
 
-// NewScanStateForRoot is a convenience constructor for the movies-only scan.
-// Kept for tests and simple deployments.
-func NewScanStateForRoot(root string, store *storage.Store, tmdb library.TMDbSearcher, prober transcoder.Prober) *ScanState {
-	return NewScanState(func(ctx context.Context, log library.Logger) (library.ScanResult, error) {
-		return library.ScanAndUpsert(ctx, root, store, tmdb, prober, log)
-	})
-}
-
 // FullTMDb is what NewScanStateForAll expects: movies + TV in one interface.
 // Kept here (not in library) because only ScanState needs it composed.
 type FullTMDb interface {
@@ -76,9 +68,9 @@ func NewScanStateForAll(moviesRoot, seriesRoot, musicRoot string, store *storage
 	})
 }
 
-// statusSnapshot is the payload of /api/library/status. Times are RFC3339 or
+// StatusSnapshot is the payload of /api/library/status. Times are RFC3339 or
 // empty strings when the scan has not yet started or finished.
-type statusSnapshot struct {
+type StatusSnapshot struct {
 	Running  bool               `json:"running"`
 	Started  string             `json:"started,omitempty"`
 	Finished string             `json:"finished,omitempty"`
@@ -87,10 +79,10 @@ type statusSnapshot struct {
 }
 
 // Snapshot returns the current state for status reporting.
-func (s *ScanState) Snapshot() statusSnapshot {
+func (s *ScanState) Snapshot() StatusSnapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	snap := statusSnapshot{
+	snap := StatusSnapshot{
 		Running: s.running,
 		Result:  s.result,
 		Error:   s.errMsg,
@@ -138,7 +130,7 @@ func (s *ScanState) Trigger() bool {
 
 // TriggerAndWait is a test helper that triggers a scan and blocks until it
 // finishes. Production callers should use Trigger.
-func (s *ScanState) TriggerAndWait() statusSnapshot {
+func (s *ScanState) TriggerAndWait() StatusSnapshot {
 	if !s.Trigger() {
 		return s.Snapshot()
 	}

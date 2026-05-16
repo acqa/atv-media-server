@@ -34,7 +34,7 @@ func TestScanState_ScanReturns202(t *testing.T) {
 
 	// Wait briefly for the goroutine to finish.
 	deadline := time.Now().Add(time.Second)
-	var snap statusSnapshot
+	var snap StatusSnapshot
 	for time.Now().Before(deadline) {
 		snap = state.Snapshot()
 		if !snap.Running {

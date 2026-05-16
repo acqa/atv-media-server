@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"database/sql"
 	"errors"
 	"time"
 )
@@ -201,8 +200,3 @@ func scanEpisode(row rowScanner) (EpisodeRow, error) {
 		&r.AudioCount, &r.NeedsTranscode, &r.UpdatedAt)
 	return r, err
 }
-
-// ErrSeriesNotFound is a sentinel for callers that want to distinguish "missing"
-// from other errors. Implementation note: GetSeries/GetEpisode return sql.ErrNoRows
-// directly — this constant is for symmetry with library callers.
-var ErrSeriesNotFound = sql.ErrNoRows
