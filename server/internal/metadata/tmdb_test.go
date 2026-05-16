@@ -39,7 +39,7 @@ func TestSearchMovie_ParsesFirstHit(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		got = r.URL
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(loadFixture(t, "search_matrix.json"))
+		_, _ = w.Write(loadFixture(t, "search_matrix.json"))
 	})
 
 	res, ok, err := c.SearchMovie(context.Background(), "The Matrix", 1999)
@@ -77,7 +77,7 @@ func TestSearchMovie_ParsesFirstHit(t *testing.T) {
 
 func TestSearchMovie_NoResults(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Write(loadFixture(t, "search_empty.json"))
+		_, _ = w.Write(loadFixture(t, "search_empty.json"))
 	})
 	_, ok, err := c.SearchMovie(context.Background(), "Nothing", 0)
 	if err != nil {
@@ -122,7 +122,7 @@ func TestSearchMovie_RetryOn429(t *testing.T) {
 			w.WriteHeader(http.StatusTooManyRequests)
 			return
 		}
-		w.Write(loadFixture(t, "search_empty.json"))
+		_, _ = w.Write(loadFixture(t, "search_empty.json"))
 	})
 	c.MaxRetries = 5
 
@@ -149,7 +149,7 @@ func TestSearchMovie_RetryExhausted(t *testing.T) {
 func TestSearchMovie_ContextCancel(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(50 * time.Millisecond)
-		w.Write(loadFixture(t, "search_empty.json"))
+		_, _ = w.Write(loadFixture(t, "search_empty.json"))
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

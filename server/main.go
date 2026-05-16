@@ -56,7 +56,7 @@ func main() {
 	if err != nil {
 		logging.Fatal("open store:", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	var tmdb *metadata.Client
 	if cfg.TMDbAPIKey != "" {

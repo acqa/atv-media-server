@@ -51,12 +51,12 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 	s := &Store{db: db}
 	if err := s.migrate(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 	return s, nil
@@ -85,11 +85,13 @@ func (s *Store) migrate() error {
 			return err
 		}
 		if _, err := tx.Exec(m); err != nil {
-			tx.Rollback()
+			// Rollback error is intentionally dropped: we're already returning the
+			// primary failure, and a rollback failure leaves nothing we can recover.
+			_ = tx.Rollback()
 			return fmt.Errorf("migration %d: %w", v, err)
 		}
 		if _, err := tx.Exec(`INSERT INTO schema_version (version) VALUES (?)`, v); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return err
 		}
 		if err := tx.Commit(); err != nil {
