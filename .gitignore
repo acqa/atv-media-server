@@ -44,3 +44,4 @@ problem.txt
 
 # Claude Code session metadata
 .claude/
+/.idea/.gitignore
