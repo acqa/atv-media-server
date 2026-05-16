@@ -1,0 +1,9 @@
+**/*_test.go
+**/testdata/
+.git
+.idea
+.vscode
+*.md
+# macOS AppleDouble files on NFS — Docker can't read xattr from them.
+**/._*
+**/.DS_Store
