@@ -16,7 +16,7 @@ type recordRunner struct {
 	failNow bool
 }
 
-func (r *recordRunner) Run(ctx context.Context, name string, args ...string) error {
+func (r *recordRunner) Run(_ context.Context, name string, args ...string) error {
 	r.calls++
 	r.args = append([]string{name}, args...)
 	if r.failNow {

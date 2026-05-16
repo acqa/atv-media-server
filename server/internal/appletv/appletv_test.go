@@ -18,7 +18,7 @@ func TestMainHandler_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status: want 200, got %d", resp.StatusCode)

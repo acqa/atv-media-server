@@ -125,7 +125,7 @@ func ScanMusic(root string) ([]MusicArtist, []MusicAlbum, []MusicTrack, error) {
 				trackNo, _ = m.Track()
 				albumYear = m.Year()
 			}
-			f.Close()
+			_ = f.Close()
 		}
 		if artistName == "" {
 			artistName = artistDirName

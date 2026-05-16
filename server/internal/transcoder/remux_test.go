@@ -16,7 +16,7 @@ type fakeRunner struct {
 	segmentNames     []string
 }
 
-func (f *fakeRunner) Run(ctx context.Context, name string, args ...string) error {
+func (f *fakeRunner) Run(_ context.Context, _ string, args ...string) error {
 	f.calls++
 	if f.failNext {
 		return errors.New("simulated ffmpeg failure")

@@ -27,7 +27,7 @@ func TestScanState_ScanReturns202(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("want 202, got %d", resp.StatusCode)
 	}
@@ -67,14 +67,14 @@ func TestScanState_ConcurrentTriggerReturns409(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp1.Body.Close()
+	_ = resp1.Body.Close()
 	if resp1.StatusCode != http.StatusAccepted {
 		t.Fatalf("first: want 202, got %d", resp1.StatusCode)
 	}
 
 	// Second request should collide.
 	resp2, _ := http.Post(srv.URL+"/api/library/scan", "", nil)
-	resp2.Body.Close()
+	_ = resp2.Body.Close()
 	if resp2.StatusCode != http.StatusConflict {
 		t.Errorf("second: want 409, got %d", resp2.StatusCode)
 	}
@@ -101,7 +101,7 @@ func TestScanState_StatusJSONShape(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	resp, _ := http.Get(srv.URL)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
 		t.Errorf("Content-Type: %q", ct)
 	}

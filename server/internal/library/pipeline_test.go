@@ -21,7 +21,7 @@ type fakeTMDb struct {
 	err     error
 }
 
-func (f *fakeTMDb) SearchMovie(ctx context.Context, query string, year int) (metadata.MovieResult, bool, error) {
+func (f *fakeTMDb) SearchMovie(_ context.Context, query string, _ int) (metadata.MovieResult, bool, error) {
 	f.calls.Add(1)
 	if f.err != nil {
 		return metadata.MovieResult{}, false, f.err
@@ -36,7 +36,7 @@ type stubProber struct {
 	info  transcoder.StreamInfo
 }
 
-func (s *stubProber) Probe(ctx context.Context, path string) (transcoder.StreamInfo, error) {
+func (s *stubProber) Probe(_ context.Context, _ string) (transcoder.StreamInfo, error) {
 	s.calls.Add(1)
 	return s.info, nil
 }
@@ -47,7 +47,7 @@ func openStore(t *testing.T) *storage.Store {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { s.Close() })
+	t.Cleanup(func() { _ = s.Close() })
 	return s
 }
 
@@ -174,14 +174,14 @@ func TestScanAndUpsert_RescansWhenFileNewer(t *testing.T) {
 	prober := &stubProber{info: transcoder.StreamInfo{VideoCodec: "h264", AudioCodec: "aac"}}
 
 	past := time.Now().Add(-time.Hour)
-	os.Chtimes(file, past, past)
+	_ = os.Chtimes(file, past, past)
 	if _, err := ScanAndUpsert(context.Background(), root, store, tmdb, prober, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	// Touch the file forward in time.
 	future := time.Now().Add(time.Hour)
-	os.Chtimes(file, future, future)
+	_ = os.Chtimes(file, future, future)
 
 	res, err := ScanAndUpsert(context.Background(), root, store, tmdb, prober, nil)
 	if err != nil {

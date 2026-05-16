@@ -92,12 +92,18 @@ func TestLoad_LogToFile_Invalid(t *testing.T) {
 
 func TestLoad_TranscodeCacheMaxGB(t *testing.T) {
 	c, err := Load(envFunc(map[string]string{"MEDIA_PATH": "/m"}))
-	if err != nil || c.TranscodeCacheMaxGB != 50 {
-		t.Errorf("default TranscodeCacheMaxGB: got %d, err %v", c.TranscodeCacheMaxGB, err)
+	if err != nil {
+		t.Fatalf("default TranscodeCacheMaxGB: err %v", err)
+	}
+	if c.TranscodeCacheMaxGB != 50 {
+		t.Errorf("default TranscodeCacheMaxGB: got %d", c.TranscodeCacheMaxGB)
 	}
 	c, err = Load(envFunc(map[string]string{"MEDIA_PATH": "/m", "TRANSCODE_CACHE_MAX_GB": "100"}))
-	if err != nil || c.TranscodeCacheMaxGB != 100 {
-		t.Errorf("override: got %d, err %v", c.TranscodeCacheMaxGB, err)
+	if err != nil {
+		t.Fatalf("override: err %v", err)
+	}
+	if c.TranscodeCacheMaxGB != 100 {
+		t.Errorf("override: got %d", c.TranscodeCacheMaxGB)
 	}
 	if _, err := Load(envFunc(map[string]string{"MEDIA_PATH": "/m", "TRANSCODE_CACHE_MAX_GB": "0"})); err == nil {
 		t.Error("expected error for zero")

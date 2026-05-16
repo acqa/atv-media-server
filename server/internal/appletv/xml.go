@@ -65,7 +65,7 @@ func (g *XMLGenerator) Render(w http.ResponseWriter, r *http.Request, page strin
 }
 
 // RenderError renders error.xml; if that itself fails, we just log.
-func (g *XMLGenerator) RenderError(w http.ResponseWriter, r *http.Request, ed ErrorData) {
+func (g *XMLGenerator) RenderError(w http.ResponseWriter, _ *http.Request, ed ErrorData) {
 	tmpl, err := template.ParseFS(templates, baseXML, errorXML)
 	if err != nil {
 		logging.Warn("error template parse:", err)

@@ -82,7 +82,7 @@ func (s *Store) ListSeries() ([]SeriesRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []SeriesRow
 	for rows.Next() {
 		r, err := scanSeries(rows)
@@ -139,7 +139,7 @@ func (s *Store) ListEpisodesBySeries(seriesID string) ([]EpisodeRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []EpisodeRow
 	for rows.Next() {
 		r, err := scanEpisode(rows)
@@ -157,7 +157,7 @@ func (s *Store) ListEpisodesBySeason(seriesID string, season int) ([]EpisodeRow,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []EpisodeRow
 	for rows.Next() {
 		r, err := scanEpisode(rows)
@@ -175,7 +175,7 @@ func (s *Store) ListSeasonsOfSeries(seriesID string) ([]int, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []int
 	for rows.Next() {
 		var n int

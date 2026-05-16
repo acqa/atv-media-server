@@ -285,7 +285,7 @@ func queryRows(db *sql.DB, q string, args ...interface{}) ([]MediaRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []MediaRow
 	for rows.Next() {
 		m, err := scanOne(rows)

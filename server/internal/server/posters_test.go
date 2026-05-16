@@ -19,7 +19,7 @@ func newPosterEnv(t *testing.T) (*storage.Store, *PosterCache, *atomic.Int32, st
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { store.Close() })
+	t.Cleanup(func() { _ = store.Close() })
 
 	cache := NewPosterCache(filepath.Join(dataDir, "posters"), store)
 
@@ -28,7 +28,7 @@ func newPosterEnv(t *testing.T) (*storage.Store, *PosterCache, *atomic.Int32, st
 		hits.Add(1)
 		// fake JPEG bytes (just any non-empty payload)
 		w.Header().Set("Content-Type", "image/jpeg")
-		w.Write([]byte("\xff\xd8\xff\xe0fake-jpeg-bytes"))
+		_, _ = w.Write([]byte("\xff\xd8\xff\xe0fake-jpeg-bytes"))
 	}))
 	t.Cleanup(upstream.Close)
 
@@ -53,7 +53,7 @@ func TestPosterCache_DownloadsAndServes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("want 200, got %d", resp.StatusCode)
 	}
@@ -67,7 +67,7 @@ func TestPosterCache_DownloadsAndServes(t *testing.T) {
 
 	// Second request uses the cache, no upstream hit.
 	resp2, _ := http.Get(srv.URL + "/poster/" + id + ".jpg?type=backdrop&size=w500")
-	resp2.Body.Close()
+	_ = resp2.Body.Close()
 	if hits.Load() != 1 {
 		t.Errorf("second request hit upstream: %d total", hits.Load())
 	}
@@ -76,7 +76,7 @@ func TestPosterCache_DownloadsAndServes(t *testing.T) {
 func TestPosterCache_FallbackForMissingPath(t *testing.T) {
 	store, cache, hits, _ := newPosterEnv(t)
 	const id = "deadbeef0000"
-	store.UpsertMedia(storage.MediaRow{ID: id, Path: "/m/x.mkv", Type: "movie", Title: "X"}) // no poster_path
+	_ = store.UpsertMedia(storage.MediaRow{ID: id, Path: "/m/x.mkv", Type: "movie", Title: "X"}) // no poster_path
 
 	srv := httptest.NewServer(cache.Handler())
 	t.Cleanup(srv.Close)
@@ -87,7 +87,7 @@ func TestPosterCache_FallbackForMissingPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusFound {
 		t.Fatalf("want 302 redirect, got %d", resp.StatusCode)
 	}
@@ -104,7 +104,7 @@ func TestPosterCache_UnknownMovieReturns404(t *testing.T) {
 	srv := httptest.NewServer(cache.Handler())
 	t.Cleanup(srv.Close)
 	resp, _ := http.Get(srv.URL + "/poster/aaaaaaaaaaaa.jpg")
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("want 404, got %d", resp.StatusCode)
 	}
@@ -126,7 +126,7 @@ func TestPosterCache_RejectsBadInputs(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.path, func(t *testing.T) {
 			resp, _ := http.Get(srv.URL + c.path)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if resp.StatusCode != c.want {
 				t.Errorf("%s: want %d, got %d", c.path, c.want, resp.StatusCode)
 			}
@@ -140,7 +140,7 @@ func TestPosterCache_UpstreamErrorFallsBackToPlaceholder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { store.Close() })
+	t.Cleanup(func() { _ = store.Close() })
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -151,7 +151,7 @@ func TestPosterCache_UpstreamErrorFallsBackToPlaceholder(t *testing.T) {
 	cache.SetImageBaseURL(upstream.URL)
 
 	const id = "abcabcabcabc"
-	store.UpsertMedia(storage.MediaRow{ID: id, Path: "/x", Type: "movie", Title: "X", BackdropPath: "/b.jpg"})
+	_ = store.UpsertMedia(storage.MediaRow{ID: id, Path: "/x", Type: "movie", Title: "X", BackdropPath: "/b.jpg"})
 
 	srv := httptest.NewServer(cache.Handler())
 	t.Cleanup(srv.Close)
@@ -161,7 +161,7 @@ func TestPosterCache_UpstreamErrorFallsBackToPlaceholder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusFound {
 		t.Errorf("want 302 redirect on upstream error, got %d", resp.StatusCode)
 	}

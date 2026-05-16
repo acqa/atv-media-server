@@ -12,7 +12,7 @@ func TestSearchTV_ParsesFirstHit(t *testing.T) {
 	var got *url.URL
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		got = r.URL
-		w.Write(loadFixture(t, "search_tv_breaking_bad.json"))
+		_, _ = w.Write(loadFixture(t, "search_tv_breaking_bad.json"))
 	})
 	res, ok, err := c.SearchTV(context.Background(), "Breaking Bad", 2008)
 	if err != nil {
@@ -45,7 +45,7 @@ func TestSearchTV_NoAPIKey(t *testing.T) {
 
 func TestSearchTV_EmptyResults(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Write(loadFixture(t, "search_empty.json"))
+		_, _ = w.Write(loadFixture(t, "search_empty.json"))
 	})
 	_, ok, err := c.SearchTV(context.Background(), "x", 0)
 	if err != nil {
@@ -60,7 +60,7 @@ func TestGetEpisode_BuildsCorrectURL(t *testing.T) {
 	var got *url.URL
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		got = r.URL
-		w.Write(loadFixture(t, "episode_s01e01.json"))
+		_, _ = w.Write(loadFixture(t, "episode_s01e01.json"))
 	})
 	ep, ok, err := c.GetEpisode(context.Background(), 1396, 1, 1)
 	if err != nil {

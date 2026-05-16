@@ -8,7 +8,7 @@ import (
 
 // yearRe captures a 4-digit year (1900-2099) optionally wrapped in () or [].
 // Anchored to find the LEFTMOST year — typically the release year, not "1080p".
-var yearRe = regexp.MustCompile(`[\s._\-]*[\(\[]?((?:19|20)\d{2})[\)\]]?`)
+var yearRe = regexp.MustCompile(`[\s._\-]*[(\[]?((?:19|20)\d{2})[)\]]?`)
 
 // ParseMovieName extracts (title, year) from a folder or file name.
 // Accepts forms like:

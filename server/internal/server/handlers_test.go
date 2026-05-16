@@ -23,7 +23,7 @@ type stubPreparer struct {
 	callsByID map[string]int
 }
 
-func (s *stubPreparer) PrepareHLS(ctx context.Context, inputPath, outDir string, audioIndex int) error {
+func (s *stubPreparer) PrepareHLS(_ context.Context, _, outDir string, _ int) error {
 	if s.callsByID == nil {
 		s.callsByID = make(map[string]int)
 	}
@@ -64,7 +64,7 @@ func newTestEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("storage.Open: %v", err)
 	}
-	t.Cleanup(func() { store.Close() })
+	t.Cleanup(func() { _ = store.Close() })
 
 	gen := appletv.New(cfg.BaseHost)
 	prep := &stubPreparer{dataDir: dataDir}
@@ -94,7 +94,7 @@ func TestMoviesHandler_EmptyLibrary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("want 200, got %d", resp.StatusCode)
 	}
@@ -116,7 +116,7 @@ func TestMoviesHandler_PopulatedListsMovies(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	resp, _ := http.Get(srv.URL + "/movies.xml")
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	if err := xml.Unmarshal(body, new(interface{})); err != nil {
 		t.Fatalf("invalid XML: %v\n%s", err, body)
@@ -139,7 +139,7 @@ func TestMovieHandler_NotFound(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	resp, _ := http.Get(srv.URL + "/movie.xml?id=nope")
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	if !strings.Contains(string(body), "Not Found") {
 		t.Errorf("expected Not Found dialog:\n%s", body)
@@ -156,7 +156,7 @@ func TestMovieHandler_RendersFullDetails(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	resp, _ := http.Get(srv.URL + "/movie.xml?id=xyz000abc111")
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	if err := xml.Unmarshal(body, new(interface{})); err != nil {
 		t.Fatalf("invalid XML: %v\n%s", err, body)
@@ -180,7 +180,7 @@ func TestMovieHandler_NoDescriptionFallback(t *testing.T) {
 	srv := httptest.NewServer(env.mux)
 	t.Cleanup(srv.Close)
 	resp, _ := http.Get(srv.URL + "/movie.xml?id=abcabcabc111")
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	if !strings.Contains(string(body), "Description not found") {
 		t.Errorf("missing fallback description:\n%s", body)
@@ -198,7 +198,7 @@ func TestPlayHandler_RendersPlayerWithoutPreparing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET play.xml: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	if err := xml.Unmarshal(body, new(interface{})); err != nil {
 		t.Fatalf("invalid XML: %v\n%s", err, body)
@@ -224,7 +224,7 @@ func TestStreamHandler_PlaylistOK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("want 200, got %d", resp.StatusCode)
 	}
@@ -248,7 +248,7 @@ func TestStreamHandler_SegmentOK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET seg: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("seg status: want 200, got %d", resp.StatusCode)
 	}
@@ -259,7 +259,7 @@ func TestStreamHandler_UnknownID(t *testing.T) {
 	srv := httptest.NewServer(env.mux)
 	t.Cleanup(srv.Close)
 	resp, _ := http.Get(srv.URL + "/stream/aaaaaaaaaaaa/playlist.m3u8")
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("want 404, got %d", resp.StatusCode)
 	}
@@ -289,7 +289,7 @@ func TestStreamHandler_RejectsBadInputs(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GET %s: %v", c.path, err)
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if resp.StatusCode != c.wantCode {
 				t.Errorf("path %s: want %d, got %d", c.path, c.wantCode, resp.StatusCode)
 			}
@@ -329,7 +329,7 @@ func TestSearchResultsHandler_FiltersByTerm(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	resp, _ := http.Get(srv.URL + "/search-results.xml?term=matrix")
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	s := string(body)
 	if !strings.Contains(s, "The Matrix") {

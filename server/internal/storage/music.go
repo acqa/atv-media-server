@@ -97,7 +97,7 @@ func (s *Store) ListArtists() ([]ArtistRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []ArtistRow
 	for rows.Next() {
 		var r ArtistRow
@@ -116,7 +116,7 @@ func (s *Store) ListAlbumsByArtist(artistID string) ([]AlbumRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []AlbumRow
 	for rows.Next() {
 		var r AlbumRow
@@ -151,7 +151,7 @@ func (s *Store) ListTracksByAlbum(albumID string) ([]TrackRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []TrackRow
 	for rows.Next() {
 		var r TrackRow

@@ -213,7 +213,7 @@ func coverHandler(store *storage.Store) http.HandlerFunc {
 
 // storedFileSafe is a thin existence check around os.Stat. Kept as a function
 // so future hardening (e.g. enforcing a media-root prefix) lands in one place.
-func storedFileSafe(path string) (any, error) {
+func storedFileSafe(_ string) (any, error) {
 	// We intentionally don't restrict to a particular root: the scanner already
 	// wrote this path into the DB after walking media/, so callers transitively
 	// trust it. If a future "delete album" flow lets users provide arbitrary

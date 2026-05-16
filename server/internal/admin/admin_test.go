@@ -21,7 +21,7 @@ func newAdmin(t *testing.T) (http.Handler, *storage.Store, *server.ScanState) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { store.Close() })
+	t.Cleanup(func() { _ = store.Close() })
 	st := server.NewScanState(func(context.Context, library.Logger) (library.ScanResult, error) {
 		return library.ScanResult{}, nil
 	})
@@ -33,7 +33,7 @@ func TestAuth_NoCreds_401(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	resp, _ := http.Get(srv.URL + "/api/stats")
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("want 401, got %d", resp.StatusCode)
 	}
@@ -49,7 +49,7 @@ func TestAuth_WrongCreds_403(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/stats", nil)
 	req.SetBasicAuth("u", "bad")
 	resp, _ := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusForbidden {
 		t.Errorf("want 403, got %d", resp.StatusCode)
 	}
@@ -62,7 +62,7 @@ func TestAuth_CorrectCreds_200(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/stats", nil)
 	req.SetBasicAuth("u", "p")
 	resp, _ := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("want 200, got %d", resp.StatusCode)
 	}
@@ -87,9 +87,9 @@ func TestStats_ReflectsDatabase(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/stats", nil)
 	req.SetBasicAuth("u", "p")
 	resp, _ := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	var s stats
-	json.NewDecoder(resp.Body).Decode(&s)
+	_ = json.NewDecoder(resp.Body).Decode(&s)
 	if s.Movies != 1 || s.Series != 1 || s.Artists != 1 {
 		t.Errorf("counts: %+v", s)
 	}
@@ -102,7 +102,7 @@ func TestScan_KicksOffScanState(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
 	req.SetBasicAuth("u", "p")
 	resp, _ := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusAccepted {
 		t.Errorf("want 202, got %d", resp.StatusCode)
 	}
@@ -115,7 +115,7 @@ func TestScanStatus_ReturnsJSON(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/scan/status", nil)
 	req.SetBasicAuth("u", "p")
 	resp, _ := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
 		t.Errorf("Content-Type: %q", ct)
 	}
@@ -128,7 +128,7 @@ func TestStatic_IndexHTMLServed(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/", nil)
 	req.SetBasicAuth("u", "p")
 	resp, _ := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	if !strings.Contains(string(body), "ATV3 Media Server") {
 		t.Errorf("index.html not served:\n%s", body)

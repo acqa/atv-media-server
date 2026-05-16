@@ -33,7 +33,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, "config error:", err)
 		os.Exit(2)
 	}
-	config.Current = cfg
 
 	if cfg.LogToFile {
 		if err := logging.EnableFile(cfg.LoggingPath); err != nil {

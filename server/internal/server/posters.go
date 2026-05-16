@@ -180,7 +180,7 @@ func (p *PosterCache) ensureCached(ctx context.Context, cacheFile, sourceURL str
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("poster: source returned " + resp.Status)
 	}
@@ -191,12 +191,12 @@ func (p *PosterCache) ensureCached(ctx context.Context, cacheFile, sourceURL str
 		return err
 	}
 	if _, err := io.Copy(f, resp.Body); err != nil {
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp)
 		return err
 	}
 	if err := f.Close(); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return err
 	}
 	return os.Rename(tmp, cacheFile)

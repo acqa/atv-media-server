@@ -14,7 +14,7 @@ func openTemp(t *testing.T) *Store {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	t.Cleanup(func() { s.Close() })
+	t.Cleanup(func() { _ = s.Close() })
 	return s
 }
 
@@ -49,12 +49,12 @@ func TestOpen_Reopen_IsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.Close()
+	_ = s.Close()
 	s2, err := Open(path)
 	if err != nil {
 		t.Fatalf("reopen: %v", err)
 	}
-	s2.Close()
+	_ = s2.Close()
 }
 
 func TestUpsertAndGetMedia_RoundTrip(t *testing.T) {

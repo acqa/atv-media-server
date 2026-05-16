@@ -179,7 +179,7 @@ func PosterURL(relPath, size string) string {
 }
 
 func readClose(resp *http.Response) ([]byte, error) {
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	const limit = 8 << 20 // 8 MiB; defensive bound on search responses
 	return io.ReadAll(io.LimitReader(resp.Body, limit))
 }

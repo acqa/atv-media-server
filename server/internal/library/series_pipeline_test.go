@@ -14,12 +14,12 @@ type fakeTVTMDb struct {
 	episodes map[int]metadata.EpisodeResult // keyed by season*100+episode for the single show in tests
 }
 
-func (f *fakeTVTMDb) SearchTV(ctx context.Context, query string, year int) (metadata.TVResult, bool, error) {
+func (f *fakeTVTMDb) SearchTV(_ context.Context, query string, _ int) (metadata.TVResult, bool, error) {
 	hit, ok := f.tv[query]
 	return hit, ok, nil
 }
 
-func (f *fakeTVTMDb) GetEpisode(ctx context.Context, tvID, season, episode int) (metadata.EpisodeResult, bool, error) {
+func (f *fakeTVTMDb) GetEpisode(_ context.Context, _, season, episode int) (metadata.EpisodeResult, bool, error) {
 	ep, ok := f.episodes[season*100+episode]
 	return ep, ok, nil
 }

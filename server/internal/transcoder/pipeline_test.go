@@ -17,7 +17,7 @@ type modeRunner struct {
 	failNow  bool
 }
 
-func (r *modeRunner) Run(ctx context.Context, name string, args ...string) error {
+func (r *modeRunner) Run(_ context.Context, _ string, args ...string) error {
 	r.calls++
 	joined := strings.Join(args, " ")
 	if strings.Contains(joined, "libx264") {
@@ -40,7 +40,7 @@ type fakeProber struct {
 	err  error
 }
 
-func (f *fakeProber) Probe(ctx context.Context, path string) (StreamInfo, error) {
+func (f *fakeProber) Probe(_ context.Context, _ string) (StreamInfo, error) {
 	return f.info, f.err
 }
 

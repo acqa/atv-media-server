@@ -22,9 +22,6 @@ type Config struct {
 	LoggingPath         string
 }
 
-// Current holds the loaded configuration. Populated by Load.
-var Current *Config
-
 // Version is set via -ldflags at build time.
 var Version = "dev"
 
