@@ -102,8 +102,8 @@ func TestMoviesHandler_EmptyLibrary(t *testing.T) {
 	if err := xml.Unmarshal(body, new(interface{})); err != nil {
 		t.Fatalf("invalid XML: %v\n%s", err, body)
 	}
-	if strings.Contains(string(body), "<oneLineMenuItem") {
-		t.Errorf("empty library produced menu items:\n%s", body)
+	if strings.Contains(string(body), "<moviePoster") {
+		t.Errorf("empty library produced poster items:\n%s", body)
 	}
 }
 
@@ -122,14 +122,33 @@ func TestMoviesHandler_PopulatedListsMovies(t *testing.T) {
 		t.Fatalf("invalid XML: %v\n%s", err, body)
 	}
 	s := string(body)
-	if !strings.Contains(s, `id="movie-abc123def456"`) || !strings.Contains(s, "The Matrix (1999)") {
-		t.Errorf("missing Matrix menu item:\n%s", s)
+	if !strings.Contains(s, "<moviePoster") {
+		t.Errorf("expected <moviePoster> elements in grid:\n%s", s)
 	}
-	if !strings.Contains(s, `id="movie-fedcba987654"`) || !strings.Contains(s, "Inception (2010)") {
-		t.Errorf("missing Inception menu item:\n%s", s)
+	if !strings.Contains(s, `id="movie-abc123def456"`) ||
+		!strings.Contains(s, "<title>The Matrix</title>") ||
+		!strings.Contains(s, "<subtitle>1999</subtitle>") {
+		t.Errorf("missing Matrix poster:\n%s", s)
 	}
+	if !strings.Contains(s, `id="movie-fedcba987654"`) ||
+		!strings.Contains(s, "<title>Inception</title>") ||
+		!strings.Contains(s, "<subtitle>2010</subtitle>") {
+		t.Errorf("missing Inception poster:\n%s", s)
+	}
+	// onSelect drives navigation to /movie.xml; onPlay starts playback directly.
 	if !strings.Contains(s, "/movie.xml?id=abc123def456") {
-		t.Errorf("missing preview link for Matrix:\n%s", s)
+		t.Errorf("missing onSelect link for Matrix:\n%s", s)
+	}
+	if !strings.Contains(s, "/play.xml?id=abc123def456") {
+		t.Errorf("missing onPlay link for Matrix:\n%s", s)
+	}
+	// Poster URL only rendered when the row has poster/backdrop set.
+	if !strings.Contains(s, "/poster/abc123def456.jpg?type=poster&amp;size=w500") {
+		t.Errorf("missing poster URL for Matrix (which has poster_path set):\n%s", s)
+	}
+	// Inception has no poster_path/backdrop_path — no <image> tag, only <defaultImage>.
+	if strings.Contains(s, "/poster/fedcba987654.jpg") {
+		t.Errorf("unexpected poster URL for Inception (no poster_path):\n%s", s)
 	}
 }
 
