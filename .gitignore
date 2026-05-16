@@ -39,9 +39,9 @@ problem.txt
 .DS_Store
 ._*
 
-# Editor/IDE — keep .idea so JetBrains projects work locally, ignore VS Code.
+# Editor/IDE
 .vscode/
+.idea/
 
 # Claude Code session metadata
 .claude/
-/.idea/.gitignore
