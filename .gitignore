@@ -1,32 +1,46 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# Binaries
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+/bin/
 
-# Test binary, built with `go test -c`
+# Go test artifacts
 *.test
-
-# Code coverage profiles and other test artifacts
 *.out
 coverage.*
 *.coverprofile
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
+# Go workspace
 go.work
 go.work.sum
 
-# env file
+# Local environment / secrets
 .env
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# Runtime data — produced by the server at runtime, not source-controlled.
+/data/
+/certs/
+
+# User-supplied media — never check in.
+/media/
+/sample-media/
+
+# Debug/diagnostic dumps captured during development.
+log*.txt
+nav-trace*
+res*.txt
+result.txt
+problem.txt
+
+# macOS junk
+.DS_Store
+._*
+
+# Editor/IDE — keep .idea so JetBrains projects work locally, ignore VS Code.
+.vscode/
+
+# Claude Code session metadata
+.claude/
