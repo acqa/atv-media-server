@@ -1,0 +1,32 @@
+{{ define "body" -}}
+<listScrollerSplit id="{{ .BodyID }}">
+  <header>
+    <simpleHeader accessibilityLabel="Music">
+      <title>Music</title>
+    </simpleHeader>
+  </header>
+  <menu>
+    <sections>
+      <menuSection>
+        <header>
+          <textDivider alignment="left" accessibilityLabel="Artists">
+            <title>Artists</title>
+          </textDivider>
+        </header>
+        <items>
+          {{- range .Data.Artists }}
+          <oneLineMenuItem
+              id="artist-{{ .ID }}"
+              accessibilityLabel="{{ .Name }}">
+            <label>{{ .Name }}</label>
+            <preview>
+              <link>{{ $.BasePath }}/artist.xml?id={{ .ID }}</link>
+            </preview>
+          </oneLineMenuItem>
+          {{- end }}
+        </items>
+      </menuSection>
+    </sections>
+  </menu>
+</listScrollerSplit>
+{{- end }}

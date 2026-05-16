@@ -1,0 +1,31 @@
+{{ define "body" -}}
+<listScrollerSplit id="{{ .BodyID }}">
+  <header>
+    <simpleHeader accessibilityLabel="{{ .Data.ArtistName }} — {{ .Data.Title }}">
+      <title>{{ .Data.ArtistName }} — {{ .Data.Title }}{{ if .Data.Year }} ({{ .Data.Year }}){{ end }}</title>
+    </simpleHeader>
+  </header>
+  <menu>
+    <sections>
+      <menuSection>
+        <header>
+          <textDivider alignment="left" accessibilityLabel="Tracks">
+            <title>Tracks</title>
+          </textDivider>
+        </header>
+        <items>
+          {{- range .Data.Tracks }}
+          <oneLineMenuItem
+              id="track-{{ .ID }}"
+              accessibilityLabel="{{ .Title }}"
+              onSelect="atvutils.loadAndSwapURL('{{ $.BasePath }}/play-audio.xml?id={{ .ID }}');"
+              onPlay="atvutils.loadAndSwapURL('{{ $.BasePath }}/play-audio.xml?id={{ .ID }}');">
+            <label>{{ if .TrackNo }}{{ printf "%02d. " .TrackNo }}{{ end }}{{ .Title }}</label>
+          </oneLineMenuItem>
+          {{- end }}
+        </items>
+      </menuSection>
+    </sections>
+  </menu>
+</listScrollerSplit>
+{{- end }}

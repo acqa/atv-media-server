@@ -1,0 +1,33 @@
+{{ define "body" -}}
+<listScrollerSplit id="{{ .BodyID }}">
+  <header>
+    <simpleHeader accessibilityLabel="Movies">
+      <title>Movies</title>
+    </simpleHeader>
+  </header>
+  <menu>
+    <sections>
+      <menuSection>
+        <header>
+          <textDivider alignment="left" accessibilityLabel="All movies">
+            <title>All movies</title>
+          </textDivider>
+        </header>
+        <items>
+          {{- range .Data.Movies }}
+          <oneLineMenuItem
+              id="movie-{{ .ID }}"
+              accessibilityLabel="{{ .Title }}"
+              onSelect="atvutils.loadURL('{{ $.BasePath }}/movie.xml?id={{ .ID }}');">
+            <label>{{ .Title }}{{ if .Year }} ({{ .Year }}){{ end }}</label>
+            <preview>
+              <link>{{ $.BasePath }}/movie.xml?id={{ .ID }}</link>
+            </preview>
+          </oneLineMenuItem>
+          {{- end }}
+        </items>
+      </menuSection>
+    </sections>
+  </menu>
+</listScrollerSplit>
+{{- end }}

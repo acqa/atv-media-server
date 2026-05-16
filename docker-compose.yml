@@ -1,0 +1,52 @@
+services:
+  media-server:
+    build:
+      context: ./server
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    ports:
+      - "80:80"
+      - "443:443"
+      - "${ADMIN_PORT:-8080}:${ADMIN_PORT:-8080}"
+    volumes:
+      - ${MEDIA_PATH:?MEDIA_PATH must be set}:/media:ro
+      - ./data:/data
+      - ./certs:/certs
+    environment:
+      MEDIA_PATH: /media
+      DATA_DIR: /data
+      CERT_DIR: /certs
+      HTTP_PORT: "80"
+      HTTPS_PORT: "443"
+      BASE_HOST: ${BASE_HOST:-appletv.redbull.tv}
+      TMDB_API_KEY: ${TMDB_API_KEY-}
+      ADMIN_PORT: ${ADMIN_PORT:-8080}
+      ADMIN_USER: ${ADMIN_USER-}
+      ADMIN_PASS: ${ADMIN_PASS-}
+      TRANSCODE_CACHE_MAX_GB: ${TRANSCODE_CACHE_MAX_GB:-50}
+      LOG_TO_FILE: "true"
+      LOGGING_PATH: /data/logs
+    restart: unless-stopped
+
+  dns:
+    image: 4km3/dnsmasq:2.85-r2
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+    environment:
+      MEDIA_SERVER_IP: ${MEDIA_SERVER_IP:?MEDIA_SERVER_IP must be set — the LAN address of this host}
+      BASE_HOST: ${BASE_HOST:-appletv.redbull.tv}
+    # Override appletv.redbull.tv to point at our media server; forward
+    # everything else to public DNS so ATV3 keeps working normally.
+    command:
+      - --keep-in-foreground
+      - --no-resolv
+      - --address=/${BASE_HOST:-appletv.redbull.tv}/${MEDIA_SERVER_IP}
+      - --server=1.1.1.1
+      - --server=8.8.8.8
+      - --log-queries
+      - --log-facility=-
+    restart: unless-stopped
+    depends_on:
+      - media-server

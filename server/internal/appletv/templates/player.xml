@@ -1,0 +1,17 @@
+{{ define "body" -}}
+<videoPlayer id="{{ .BodyID }}">
+  <httpLiveStreamingVideoAsset
+      id="{{ .Data.ID }}"
+      indefiniteDuration="false">
+    <!-- HTTP (not HTTPS) — Apple TV 3's AVPlayer has stricter TLS rules than
+         its UIWebView; HTTPS with a user-installed cert often works for XML
+         pages but is silently rejected for media streams. Plain HTTP avoids
+         the trust issue entirely while we debug. -->
+    <mediaURL>http://{{ .BaseHost }}/stream/{{ .Data.ID }}/playlist.m3u8?a={{ .Data.AudioIdx }}</mediaURL>
+    <title>{{ .Data.Title }}</title>
+    <description></description>
+    <image src720="{{ .BasePath }}/assets/images/missing_logo.png"
+           src1080="{{ .BasePath }}/assets/images/missing_logo.png" />
+  </httpLiveStreamingVideoAsset>
+</videoPlayer>
+{{- end }}

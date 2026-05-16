@@ -1,0 +1,18 @@
+{{ define "body" -}}
+<optionList
+    id="{{ .BodyID }}"
+    autoSelectSingleItem="false">
+  <title>{{ .Data.ShowTitle }} — S{{ printf "%02d" .Data.Season }}E{{ printf "%02d" .Data.Episode }}</title>
+  <footnote>{{ if .Data.Description }}{{ .Data.Description }}{{ else if .Data.Title }}{{ .Data.Title }}{{ else }}Description not found.{{ end }}</footnote>
+  <items>
+    {{- range $idx := .Data.AudioTracks }}
+    <oneLineMenuItem
+        id="play-{{ $.Data.ID }}-a{{ $idx }}"
+        accessibilityLabel="Play{{ if gt (len $.Data.AudioTracks) 1 }} (audio {{ $idx }}){{ end }}"
+        onSelect="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ $.Data.ID }}&amp;audio={{ $idx }}');">
+      <label>{{ if gt (len $.Data.AudioTracks) 1 }}Audio {{ $idx }}{{ else }}Play{{ end }}</label>
+    </oneLineMenuItem>
+    {{- end }}
+  </items>
+</optionList>
+{{- end }}
