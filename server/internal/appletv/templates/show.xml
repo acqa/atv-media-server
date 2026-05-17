@@ -1,13 +1,5 @@
 {{ define "body" -}}
-<itemDetailWithImageHeader id="{{ .BodyID }}" layout="compact">
-  {{- if .Data.HasBackdrop }}
-  <header>
-    <imageHeader>
-      <image insets="0, 0, 440, 0" required="true">{{ .BasePath }}/art-series/{{ .Data.ID }}.jpg?type=backdrop&amp;size=w1280</image>
-    </imageHeader>
-  </header>
-  {{- end }}
-
+<itemDetail id="{{ .BodyID }}">
   <title>{{ .Data.Title }}{{ if .Data.Year }} ({{ .Data.Year }}){{ end }}</title>
   <summary>{{ if .Data.Description }}{{ .Data.Description }}{{ else }}Description not found.{{ end }}</summary>
 
@@ -19,11 +11,20 @@
   <defaultImage>resource://Poster.png</defaultImage>
 
   {{- if .Data.HasRating }}
-  <userRatings>
-    <starRating>
-      <percentage>{{ .Data.RatingPercent }}</percentage>
-    </starRating>
-  </userRatings>
+  <table>
+    <columnDefinitions>
+      <columnDefinition width="50" alignment="left">
+        <title>Rating</title>
+      </columnDefinition>
+    </columnDefinitions>
+    <rows>
+      <row>
+        <starRating>
+          <percentage>{{ .Data.RatingPercent }}</percentage>
+        </starRating>
+      </row>
+    </rows>
+  </table>
   {{- end }}
 
   <centerShelf>
@@ -46,5 +47,5 @@
       </sections>
     </shelf>
   </centerShelf>
-</itemDetailWithImageHeader>
+</itemDetail>
 {{- end }}

@@ -31,7 +31,6 @@ type ShowPage struct {
 	Year          int
 	Description   string
 	HasPoster     bool
-	HasBackdrop   bool
 	Rating        float64
 	HasRating     bool
 	RatingPercent int
@@ -138,7 +137,6 @@ func showHandler(gen *appletv.XMLGenerator, store *storage.Store) http.HandlerFu
 		gen.Render(w, r, "show.xml", ShowPage{
 			ID: s.ID, Title: s.Title, Year: s.Year, Description: s.Description,
 			HasPoster:     s.PosterPath != "" || s.BackdropPath != "",
-			HasBackdrop:   s.BackdropPath != "",
 			Rating:        s.Rating,
 			HasRating:     s.Rating > 0,
 			RatingPercent: RatingPercent(s.Rating),

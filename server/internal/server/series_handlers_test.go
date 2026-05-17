@@ -136,9 +136,7 @@ func TestShowHandler_RendersFullDetails(t *testing.T) {
 	}
 	s := string(body)
 	for _, want := range []string{
-		"<itemDetailWithImageHeader",
-		"<imageHeader>",
-		"/art-series/" + id + ".jpg?type=backdrop&amp;size=w1280",
+		"<itemDetail",
 		`<image style="moviePoster">`,
 		"/art-series/" + id + ".jpg?type=poster&amp;size=w780",
 		"Breaking Bad",
@@ -159,31 +157,18 @@ func TestShowHandler_RendersFullDetails(t *testing.T) {
 			t.Errorf("missing %q in body:\n%s", want, s)
 		}
 	}
-}
-
-func TestShowHandler_WithoutBackdropSkipsHeader(t *testing.T) {
-	env := newTestEnv(t)
-	const id = "shownobkdrp1"
-	upsertSeries(t, env.store, storage.SeriesRow{
-		ID: id, Title: "Plain", PosterPath: "/p.jpg", // poster only, no backdrop
-	})
-	upsertEpisode(t, env.store, storage.EpisodeRow{ID: "e9aaa", SeriesID: id, Season: 1, Episode: 1})
-
-	srv := httptest.NewServer(env.mux)
-	t.Cleanup(srv.Close)
-	resp, _ := http.Get(srv.URL + "/show.xml?id=" + id)
-	defer func() { _ = resp.Body.Close() }()
-	body, _ := io.ReadAll(resp.Body)
-	s := string(body)
+	// <itemDetailWithImageHeader> + <imageHeader> are intentionally NOT used
+	// on shows: ATV3 firmware 7.9 mis-renders the header, overlaying the
+	// moviePoster <image> on top of itself. Backdrop is dropped on shows;
+	// only the poster <image> is shown. See [show.xml] for the rationale.
+	if strings.Contains(s, "<itemDetailWithImageHeader") {
+		t.Errorf("show.xml must use <itemDetail>, not <itemDetailWithImageHeader>:\n%s", s)
+	}
 	if strings.Contains(s, "<imageHeader>") {
-		t.Errorf("expected no <imageHeader> when HasBackdrop=false:\n%s", s)
+		t.Errorf("show.xml must not emit <imageHeader>:\n%s", s)
 	}
 	if strings.Contains(s, "type=backdrop") {
-		t.Errorf("expected no backdrop URL when HasBackdrop=false:\n%s", s)
-	}
-	// Poster <image> still rendered (poster_path is set).
-	if !strings.Contains(s, `<image style="moviePoster">`) {
-		t.Errorf("expected poster <image> when PosterPath is set:\n%s", s)
+		t.Errorf("show.xml must not request the series backdrop:\n%s", s)
 	}
 }
 
