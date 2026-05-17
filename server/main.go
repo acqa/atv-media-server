@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,25 +61,25 @@ func main() {
 	}
 	defer func() { _ = store.Close() }()
 
-	// Build a DoH-aware HTTP path for TMDb hosts. On networks that
-	// DNS-sinkhole api.themoviedb.org / image.tmdb.org the system resolver
-	// returns loopback and the dials fail with "dial tcp [::1]:443:
-	// connect: connection refused"; DoH resolves them via Cloudflare (with
-	// Quad9 as fallback) and the transport dials the returned IPs directly.
-	// See docs/KNOWN_ISSUES.md §2 for the failure mode this addresses.
-	dohResolver := dnsdoh.NewResolver(dnsdoh.Config{Providers: cfg.DohURL})
-	dohClientTMDb := dnsdoh.NewHTTPClient(dohResolver, 15*time.Second)
-	dohClientPosters := dnsdoh.NewHTTPClient(dohResolver, 30*time.Second)
-	providers := cfg.DohURL
-	if len(providers) == 0 {
-		providers = dnsdoh.DefaultProviders
-	}
-	logging.Info("DoH resolver enabled for TMDb hosts (providers: " + strings.Join(providers, ", ") + ")")
+	// Decide the HTTP path for TMDb hosts. On networks that DNS-sinkhole
+	// api.themoviedb.org / image.tmdb.org the system resolver returns
+	// loopback and the dials fail with "dial tcp [::1]:443: connect:
+	// connection refused"; DoH resolves them via Cloudflare (with Quad9 as
+	// fallback) and dials the returned IPs directly. See
+	// docs/KNOWN_ISSUES.md §2 for the failure mode this addresses.
+	//
+	// We auto-detect by probing image.tmdb.org through the system resolver
+	// once at startup; an explicit DOH_URL also forces DoH on (caller knows
+	// best). Otherwise we stay on the default DNS path with no overhead.
+	const probeHost = "image.tmdb.org"
+	sinkholed := dnsdoh.IsSinkholed(probeHost)
+	forceDoH := len(cfg.DohURL) > 0
+	clientTMDb, clientPosters := buildTMDbHTTPClients(cfg, sinkholed, forceDoH)
 
 	var tmdb *metadata.Client
 	if cfg.TMDbAPIKey != "" {
 		tmdb = metadata.New(cfg.TMDbAPIKey)
-		tmdb.HTTP = dohClientTMDb
+		tmdb.HTTP = clientTMDb
 		logging.Info("TMDb metadata enrichment enabled")
 	} else {
 		logging.Info("TMDB_API_KEY empty — metadata enrichment disabled")
@@ -108,11 +109,11 @@ func main() {
 	// TMDb into a permanent on-disk copy. After warming the server can run in
 	// networks where image.tmdb.org is unreachable without losing artwork.
 	posters := server.NewPosterCache(filepath.Join(cfg.DataDir, "posters"), store)
-	posters.SetHTTP(dohClientPosters)
+	posters.SetHTTP(clientPosters)
 	seriesPosters := server.NewSeriesPosterCache(filepath.Join(cfg.DataDir, "posters"), store)
-	seriesPosters.SetHTTP(dohClientPosters)
+	seriesPosters.SetHTTP(clientPosters)
 	episodeStills := server.NewEpisodeStillCache(filepath.Join(cfg.DataDir, "posters"), store)
-	episodeStills.SetHTTP(dohClientPosters)
+	episodeStills.SetHTTP(clientPosters)
 
 	scanState := server.NewScanStateForAll(moviesRoot, seriesRoot, musicRoot, store, fullTMDb, prober,
 		posters, seriesPosters, episodeStills)
@@ -178,6 +179,36 @@ func main() {
 	if err := server.Serve(cfg, deps); err != nil {
 		logging.Fatal(err)
 	}
+}
+
+// buildTMDbHTTPClients returns the (api, poster) clients to use for
+// api.themoviedb.org and image.tmdb.org. The choice between DoH and the
+// default DNS path is logged at Info level so the operator can see, from a
+// single line in startup logs, why TMDb traffic is being routed the way it is.
+//
+// Decision matrix:
+//   - sinkholed=true                — auto-enable DoH with cfg.DohURL or DefaultProviders.
+//   - forceDoH=true (DOH_URL set)   — DoH on regardless of probe.
+//   - both false                    — default http.Client, no DoH overhead.
+func buildTMDbHTTPClients(cfg *config.Config, sinkholed, forceDoH bool) (api, posters *http.Client) {
+	if !sinkholed && !forceDoH {
+		logging.Info("system resolver clean for image.tmdb.org; using default DNS for TMDb hosts")
+		return &http.Client{Timeout: 15 * time.Second}, &http.Client{Timeout: 30 * time.Second}
+	}
+	providers := cfg.DohURL
+	if len(providers) == 0 {
+		providers = dnsdoh.DefaultProviders
+	}
+	resolver := dnsdoh.NewResolver(dnsdoh.Config{Providers: cfg.DohURL})
+	switch {
+	case sinkholed && forceDoH:
+		logging.Info("system resolver returns sinkhole for image.tmdb.org; DoH enabled (forced via DOH_URL) — providers: " + strings.Join(providers, ", "))
+	case sinkholed:
+		logging.Info("system resolver returns sinkhole for image.tmdb.org; using DoH (providers: " + strings.Join(providers, ", ") + ")")
+	default: // forceDoH only
+		logging.Info("DoH explicitly enabled via DOH_URL — providers: " + strings.Join(providers, ", "))
+	}
+	return dnsdoh.NewHTTPClient(resolver, 15*time.Second), dnsdoh.NewHTTPClient(resolver, 30*time.Second)
 }
 
 // startCacheGC runs an LRU sweep on transcodedDir every hour. Best-effort:
