@@ -64,7 +64,7 @@ Name parsing rules:
 ## Quick start
 
 ```bash
-git clone https://github.com/<you>/atv-media-server
+git clone https://github.com/acqa/atv-media-server
 cd atv-media-server
 
 cp .env.example .env
