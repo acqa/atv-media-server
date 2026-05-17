@@ -2,24 +2,30 @@ package library
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 
 	"github.com/atv-media-server/server/internal/metadata"
 	"github.com/atv-media-server/server/internal/transcoder"
 )
 
-// fakeTVTMDb returns canned TV + episode responses.
+// fakeTVTMDb returns canned TV + episode responses and counts calls so tests
+// can assert the cache short-circuits TMDb traffic on reruns.
 type fakeTVTMDb struct {
 	tv       map[string]metadata.TVResult
 	episodes map[int]metadata.EpisodeResult // keyed by season*100+episode for the single show in tests
+	tvCalls  atomic.Int32
+	epCalls  atomic.Int32
 }
 
 func (f *fakeTVTMDb) SearchTV(_ context.Context, query string, _ int) (metadata.TVResult, bool, error) {
+	f.tvCalls.Add(1)
 	hit, ok := f.tv[query]
 	return hit, ok, nil
 }
 
 func (f *fakeTVTMDb) GetEpisode(_ context.Context, _, season, episode int) (metadata.EpisodeResult, bool, error) {
+	f.epCalls.Add(1)
 	ep, ok := f.episodes[season*100+episode]
 	return ep, ok, nil
 }
@@ -105,6 +111,8 @@ func TestScanSeriesAndUpsert_SkipsUnchanged(t *testing.T) {
 		t.Fatal(err)
 	}
 	firstProbes := prober.calls.Load()
+	firstTV := tmdb.tvCalls.Load()
+	firstEp := tmdb.epCalls.Load()
 
 	// Second run on unchanged tree skips episode re-probe.
 	if _, err := ScanSeriesAndUpsert(context.Background(), root, store, tmdb, prober, nil); err != nil {
@@ -112,5 +120,13 @@ func TestScanSeriesAndUpsert_SkipsUnchanged(t *testing.T) {
 	}
 	if prober.calls.Load() != firstProbes {
 		t.Errorf("re-probed unchanged: %d -> %d", firstProbes, prober.calls.Load())
+	}
+	// Cached TMDb rows must short-circuit both SearchTV and GetEpisode so reruns
+	// on a network where TMDb is blocked don't keep banging on the API.
+	if tmdb.tvCalls.Load() != firstTV {
+		t.Errorf("re-queried SearchTV: %d -> %d", firstTV, tmdb.tvCalls.Load())
+	}
+	if tmdb.epCalls.Load() != firstEp {
+		t.Errorf("re-queried GetEpisode: %d -> %d", firstEp, tmdb.epCalls.Load())
 	}
 }

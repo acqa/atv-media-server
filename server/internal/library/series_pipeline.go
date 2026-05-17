@@ -22,7 +22,9 @@ type SeriesScanResult struct {
 // ScanSeriesAndUpsert walks root (typically <media>/series), parses the
 // hierarchy and upserts a series row + episode rows for every show found.
 // tmdb and prober are both optional. TMDb episode lookups happen only when
-// the series has a TMDb match — saves a round trip per file.
+// the series has a TMDb match — saves a round trip per file. Series and
+// episodes whose TMDb fields are already cached in the DB are not re-queried,
+// so reruns on a network where TMDb is unreachable stay quiet.
 func ScanSeriesAndUpsert(ctx context.Context, root string, store *storage.Store, tmdb TMDbTVSearcher, prober transcoder.Prober, log Logger) (SeriesScanResult, error) {
 	if log == nil {
 		log = func(string, ...interface{}) {}
@@ -45,7 +47,24 @@ func ScanSeriesAndUpsert(ctx context.Context, root string, store *storage.Store,
 			Year:      s.Year,
 			UpdatedAt: time.Now().UTC(),
 		}
-		if tmdb != nil {
+		existingSeries, serr := store.GetSeries(s.ID)
+		hasSeriesRow := serr == nil
+		if !hasSeriesRow && !errors.Is(serr, sql.ErrNoRows) {
+			log("get series %s: %v", s.ID, serr)
+		}
+		switch {
+		case hasSeriesRow && existingSeries.TMDbID != 0:
+			row.Title = existingSeries.Title
+			if existingSeries.Year != 0 {
+				row.Year = existingSeries.Year
+			}
+			row.Description = existingSeries.Description
+			row.PosterPath = existingSeries.PosterPath
+			row.BackdropPath = existingSeries.BackdropPath
+			row.Rating = existingSeries.Rating
+			row.TMDbID = existingSeries.TMDbID
+			tvByID[s.ID] = metadata.TVResult{TMDbID: existingSeries.TMDbID, Title: existingSeries.Title, Year: existingSeries.Year}
+		case tmdb != nil:
 			hit, ok, terr := tmdb.SearchTV(ctx, s.Title, s.Year)
 			switch {
 			case terr != nil && !errors.Is(terr, metadata.ErrNoAPIKey):
@@ -98,14 +117,22 @@ func ScanSeriesAndUpsert(ctx context.Context, root string, store *storage.Store,
 			Path:      e.Path,
 			UpdatedAt: time.Now().UTC(),
 		}
-		if tv, ok := tvByID[e.SeriesID]; ok && tmdb != nil {
-			ep, found, eerr := tmdb.GetEpisode(ctx, tv.TMDbID, e.Season, e.Episode)
-			if eerr != nil && !errors.Is(eerr, metadata.ErrNoAPIKey) {
-				log("TMDb episode S%dE%d: %v", e.Season, e.Episode, eerr)
-			} else if found {
-				row.Title = ep.Name
-				row.Description = ep.Description
-				row.StillPath = ep.StillPath
+		if tv, ok := tvByID[e.SeriesID]; ok {
+			// Reuse cached episode metadata when available — anything from TMDb
+			// is a sentinel that we've already queried successfully.
+			if hasRow && (existing.Title != "" || existing.Description != "" || existing.StillPath != "") {
+				row.Title = existing.Title
+				row.Description = existing.Description
+				row.StillPath = existing.StillPath
+			} else if tmdb != nil {
+				ep, found, eerr := tmdb.GetEpisode(ctx, tv.TMDbID, e.Season, e.Episode)
+				if eerr != nil && !errors.Is(eerr, metadata.ErrNoAPIKey) {
+					log("TMDb episode S%dE%d: %v", e.Season, e.Episode, eerr)
+				} else if found {
+					row.Title = ep.Name
+					row.Description = ep.Description
+					row.StillPath = ep.StillPath
+				}
 			}
 		}
 		if prober != nil {
