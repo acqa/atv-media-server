@@ -42,26 +42,35 @@ Issues we hit during real-device testing on Apple TV 3 (model `AppleTV3,2`, firm
 
 ---
 
-## 2. TMDb (`api.themoviedb.org` / `image.tmdb.org`) is DNS-blocked at the user's ISP
+## 2. TMDb (`api.themoviedb.org` / `image.tmdb.org`) is DNS-blocked at the user's ISP — handled by DoH
 
-**Where**: [server/internal/metadata/](../server/internal/metadata/) and [server/internal/server/posters.go](../server/internal/server/posters.go).
+**Where**: [server/internal/dnsdoh/](../server/internal/dnsdoh/), wired into [server/internal/metadata/](../server/internal/metadata/) and [server/internal/server/posters.go](../server/internal/server/posters.go) from [server/main.go](../server/main.go).
 
-**Symptoms** in logs:
+**Status**: fixed in code as of the auto-DoH adaptation. The original failure log is preserved below for reference; current behaviour follows in **What the server does about it**.
+
+**Original symptoms** in logs:
 
 ```
 TMDb "Питер FM": dial tcp [::1]:443: connect: connection refused
 warm episodes: Get "https://image.tmdb.org/t/p/w780/...jpg": dial tcp 127.0.0.1:443: connect: connection refused
 ```
 
-DNS resolves TMDb hostnames to `[::1]` / `127.0.0.1` (loopback). Our Go process tries to connect to localhost:443, where the container's own HTTPS server is listening — TLS handshake succeeds but the server presents its `appletv.redbull.tv` certificate, which doesn't match `image.tmdb.org`, so the resolver-cache fetch fails with a `x509: certificate is valid for appletv.redbull.tv, not image.tmdb.org` error.
+DNS resolved TMDb hostnames to `[::1]` / `127.0.0.1` (loopback). The Go process tried to connect to localhost:443, where the container's own HTTPS server was listening; the server presented its `appletv.redbull.tv` certificate, which doesn't match `image.tmdb.org`, so the fetch failed with an `x509: certificate is valid for appletv.redbull.tv, not image.tmdb.org` error.
 
 **Root cause**: ISP-level DNS sinkholing of TMDb (Russian RKN). Docker's resolver inherits from the host, which inherits from the upstream provider.
 
-**Why we're not fixing it in code**: workarounds in code (DoH, hardcoded resolver to 1.1.1.1, etc.) would add complexity for a problem the user can solve operationally.
+**What the server does about it**: at startup `main.go` calls `dnsdoh.IsSinkholed("image.tmdb.org")` — a single `net.LookupIP`. If any answer is loopback or unspecified, the metadata client and poster caches get an `http.Client` whose `DialContext` resolves TMDb hostnames via DoH (RFC 8484 wire-format) and dials the returned IPs directly. Default providers: Cloudflare (`https://cloudflare-dns.com/dns-query`) primary, Quad9 (`https://dns.quad9.net/dns-query`) fallback. The chosen path is logged once, e.g. `system resolver returns sinkhole for image.tmdb.org; using DoH (providers: …)`.
 
-**Workaround**: run the server once on a network with TMDb access (or via a VPN on the host). The warm pass after the initial scan downloads every poster size the templates request and saves them under `data/posters/`. Subsequent runs without TMDb access serve everything from the on-disk cache without making any outbound TMDb calls.
+On a clean network the probe returns false and `main.go` keeps the default `http.Client` — no per-request DoH overhead.
 
-This is the use case the `WarmMovies` / `WarmSeries` / `WarmEpisodes` helpers were designed for (see [server/internal/server/posters_warm.go](../server/internal/server/posters_warm.go)).
+To override the provider list (e.g. when both Cloudflare and Quad9 are filtered on the local network), set `DOH_URL` to a comma-separated list of DoH endpoints. Any non-empty `DOH_URL` also forces DoH on regardless of the probe.
+
+**Remaining edge cases** (not addressed in code):
+
+- **SNI / IP-level filtering on top of DNS.** DoH only fixes the DNS leg; if the ISP also blocks the TLS handshake by SNI or RST-injects at the IP layer, even a DoH-resolved IP will fail to connect. Phase-0 diagnostics on the original network ruled this out (direct dials returned 200/401 over real TLS), so the case is hypothetical here. Symptom would be TLS handshake errors or connection RSTs *after* the DoH switch is logged — that's the signal to file a separate task.
+- **All configured DoH endpoints unreachable.** The resolver returns errors, fetches fail per request, but the server stays up and serves whatever is already in the on-disk poster cache (`data/posters/`). The warm-cache workaround below remains the recovery path.
+
+**Long-standing offline workaround** (still works, useful as a fallback): run the server once on a network with TMDb access (or via a VPN on the host). The warm pass after the initial scan downloads every poster size the templates request and saves them under `data/posters/`. Subsequent runs serve everything from the on-disk cache without making any outbound TMDb calls. See [server/internal/server/posters_warm.go](../server/internal/server/posters_warm.go).
 
 ---
 
