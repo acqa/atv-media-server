@@ -5,6 +5,8 @@
 
   {{- if .Data.HasStill }}
   <image style="sixteenByNinePoster">{{ .BasePath }}/episode-still/{{ .Data.ID }}.jpg?size=w780</image>
+  {{- else }}
+  <image style="sixteenByNinePoster">resource://16x9.png</image>
   {{- end }}
   <defaultImage>resource://16x9.png</defaultImage>
 

@@ -306,9 +306,12 @@ func TestEpisodeHandler_NoDescriptionFallback(t *testing.T) {
 	if !strings.Contains(s, "Description not found") {
 		t.Errorf("missing fallback description:\n%s", s)
 	}
-	// No still / no codecs / no duration — neither <image style="sixteenByNinePoster"> nor <table> should appear.
-	if strings.Contains(s, `<image style="sixteenByNinePoster">`) {
-		t.Errorf("unexpected still <image> for episode without StillPath:\n%s", s)
+	// No still / no codecs / no duration — <table> is skipped, but
+	// <image style="sixteenByNinePoster"> MUST still be emitted (with a
+	// resource:// fallback). ATV3 rejects <itemDetail> outright when the
+	// <image> tag is missing.
+	if !strings.Contains(s, `<image style="sixteenByNinePoster">resource://16x9.png</image>`) {
+		t.Errorf("expected <image> fallback to resource://16x9.png:\n%s", s)
 	}
 	if strings.Contains(s, "<table>") {
 		t.Errorf("unexpected <table> when no duration/quality:\n%s", s)

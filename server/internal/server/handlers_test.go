@@ -224,12 +224,15 @@ func TestMovieHandler_NoDescriptionFallback(t *testing.T) {
 	if !strings.Contains(s, "Description not found") {
 		t.Errorf("missing fallback description:\n%s", body)
 	}
-	// Bare row: no poster, no duration, no codecs, no rating — table and image must be skipped.
+	// Bare row: no poster, no duration, no codecs, no rating — <table> is skipped,
+	// but <image style="moviePoster"> MUST still be emitted (with a resource://
+	// fallback). ATV3 rejects the entire <itemDetail> page with a generic
+	// "sample-xml is currently unavailable" error if the <image> tag is missing.
 	if strings.Contains(s, "<table>") {
 		t.Errorf("expected no <table> when no duration/quality/rating:\n%s", s)
 	}
-	if strings.Contains(s, `<image style="moviePoster">`) {
-		t.Errorf("expected no poster <image> for row without poster_path:\n%s", s)
+	if !strings.Contains(s, `<image style="moviePoster">resource://Poster.png</image>`) {
+		t.Errorf("expected <image> fallback to resource://Poster.png:\n%s", s)
 	}
 	if !strings.Contains(s, "<defaultImage>resource://Poster.png</defaultImage>") {
 		t.Errorf("expected <defaultImage> fallback:\n%s", s)

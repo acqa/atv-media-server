@@ -5,6 +5,8 @@
 
   {{- if .Data.HasPoster }}
   <image style="moviePoster">{{ .BasePath }}/poster/{{ .Data.ID }}.jpg?type=poster&amp;size=w780</image>
+  {{- else }}
+  <image style="moviePoster">resource://Poster.png</image>
   {{- end }}
   <defaultImage>resource://Poster.png</defaultImage>
 
