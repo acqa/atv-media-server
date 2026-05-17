@@ -146,7 +146,7 @@ func TestShowHandler_RendersFullDetails(t *testing.T) {
 		"<percentage>95</percentage>",
 		"<bottomShelf>",
 		`columnCount="5"`, // fixed grid: 2 seasons still get 5-column shelf, tiles 1/5 wide
-		"<moviePoster",
+		"<actionButton",
 		`id="season-` + id + `-1"`,
 		`id="season-` + id + `-2"`,
 		"/season.xml?show=" + id + "&amp;s=1",
@@ -171,16 +171,14 @@ func TestShowHandler_RendersFullDetails(t *testing.T) {
 	if strings.Contains(s, "type=backdrop") {
 		t.Errorf("show.xml must not request the series backdrop:\n%s", s)
 	}
-	// Seasons go into <bottomShelf> with <moviePoster> items, not <centerShelf>
-	// with <actionButton>. <centerShelf center="true"> mis-renders when items
-	// overflow columnCount: with 5+ seasons the row started at the screen edge
-	// and overlapped the poster on the left. <bottomShelf> handles overflow
-	// with horizontal scroll cleanly.
+	// Seasons go into <bottomShelf> with <actionButton> tiles. <centerShelf
+	// center="true"> mis-renders when items overflow columnCount: with 5+
+	// seasons the row started at the screen edge and overlapped the poster on
+	// the left. <bottomShelf> handles overflow with horizontal scroll cleanly,
+	// while <actionButton> keeps the compact "label inside the button" look
+	// (vs. <moviePoster>'s stretched rectangle with label below).
 	if strings.Contains(s, "<centerShelf>") {
 		t.Errorf("show.xml must use <bottomShelf> for seasons, not <centerShelf>:\n%s", s)
-	}
-	if strings.Contains(s, "<actionButton") {
-		t.Errorf("show.xml must use <moviePoster> for season tiles, not <actionButton>:\n%s", s)
 	}
 }
 

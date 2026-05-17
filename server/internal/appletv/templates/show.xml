@@ -33,14 +33,14 @@
         <shelfSection>
           <items>
             {{- range .Data.Seasons }}
-            <moviePoster
+            <actionButton
                 id="season-{{ $.Data.ID }}-{{ . }}"
-                alwaysShowTitles="true"
                 onSelect="atvutils.loadURL('{{ $.BasePath }}/season.xml?show={{ $.Data.ID }}&amp;s={{ . }}');"
                 onPlay="atvutils.loadURL('{{ $.BasePath }}/season.xml?show={{ $.Data.ID }}&amp;s={{ . }}');">
               <title>Season {{ . }}</title>
-              <defaultImage>resource://Folder.png</defaultImage>
-            </moviePoster>
+              <image>resource://Folder.png</image>
+              <focusedImage>resource://Folder.png</focusedImage>
+            </actionButton>
             {{- end }}
           </items>
         </shelfSection>
