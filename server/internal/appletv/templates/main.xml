@@ -7,10 +7,16 @@
     <navigationItem id="movies" accessibilityLabel="Movies">
       <title>Movies</title>
       <url>{{ .BasePath }}/movies.xml</url>
+      <preview>
+        <link>{{ .BasePath }}/preview-movies.xml</link>
+      </preview>
     </navigationItem>
     <navigationItem id="series" accessibilityLabel="TV Shows">
       <title>TV Shows</title>
       <url>{{ .BasePath }}/series.xml</url>
+      <preview>
+        <link>{{ .BasePath }}/preview-series.xml</link>
+      </preview>
     </navigationItem>
   </navigation>
 </viewWithNavigationBar>

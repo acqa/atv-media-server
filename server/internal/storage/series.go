@@ -96,6 +96,29 @@ func (s *Store) ListSeries() ([]SeriesRow, error) {
 	return out, rows.Err()
 }
 
+// ListRecentSeries returns up to n series ordered by updated_at DESC, then id
+// (stable tiebreak). Used by the home-screen preview carousel.
+func (s *Store) ListRecentSeries(n int) ([]SeriesRow, error) {
+	if n <= 0 {
+		return nil, nil
+	}
+	rows, err := s.db.Query(
+		`SELECT `+seriesColumns+` FROM series ORDER BY updated_at DESC, id LIMIT ?`, n)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []SeriesRow
+	for rows.Next() {
+		r, err := scanSeries(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
 // UpsertEpisode inserts or updates an episode row.
 func (s *Store) UpsertEpisode(r EpisodeRow) error {
 	if r.ID == "" || r.SeriesID == "" || r.Path == "" || r.Season <= 0 || r.Episode <= 0 {

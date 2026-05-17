@@ -110,6 +110,8 @@ func buildMux(cfg *config.Config, gen *appletv.XMLGenerator, deps Deps) *http.Se
 
 	mux.HandleFunc("/movies.xml", moviesHandler(gen, deps.Store))
 	mux.HandleFunc("/movie.xml", movieHandler(gen, deps.Store))
+	mux.HandleFunc("/preview-movies.xml", previewMoviesHandler(gen, deps.Store))
+	mux.HandleFunc("/preview-series.xml", previewSeriesHandler(gen, deps.Store))
 	mux.HandleFunc("/series.xml", seriesHandler(gen, deps.Store))
 	mux.HandleFunc("/show.xml", showHandler(gen, deps.Store))
 	mux.HandleFunc("/season.xml", seasonHandler(gen, deps.Store))

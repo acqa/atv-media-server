@@ -254,6 +254,18 @@ func (s *Store) ListMovies() ([]MediaRow, error) {
 	return queryRows(s.db, `SELECT `+mediaColumns+` FROM media WHERE type = 'movie' ORDER BY title COLLATE NOCASE, year`)
 }
 
+// ListRecentMovies returns up to n movie rows ordered by updated_at DESC, then
+// id (stable tiebreak for newly-added rows that share a timestamp). Used by the
+// home-screen preview carousel.
+func (s *Store) ListRecentMovies(n int) ([]MediaRow, error) {
+	if n <= 0 {
+		return nil, nil
+	}
+	return queryRows(s.db,
+		`SELECT `+mediaColumns+` FROM media WHERE type = 'movie' ORDER BY updated_at DESC, id LIMIT ?`,
+		n)
+}
+
 // SearchMovies returns movies whose title contains term (case-insensitive).
 // Empty term returns all movies (equivalent to ListMovies).
 func (s *Store) SearchMovies(term string) ([]MediaRow, error) {
