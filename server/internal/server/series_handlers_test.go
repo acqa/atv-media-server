@@ -144,7 +144,7 @@ func TestShowHandler_RendersFullDetails(t *testing.T) {
 		"<summary>Chemistry teacher turns drug lord</summary>",
 		"<starRating>",
 		"<percentage>95</percentage>",
-		"<bottomShelf>",
+		"<centerShelf>",
 		`columnCount="5"`, // fixed grid: 2 seasons still get 5-column shelf, tiles 1/5 wide
 		"<actionButton",
 		`id="season-` + id + `-1"`,
@@ -171,14 +171,18 @@ func TestShowHandler_RendersFullDetails(t *testing.T) {
 	if strings.Contains(s, "type=backdrop") {
 		t.Errorf("show.xml must not request the series backdrop:\n%s", s)
 	}
-	// Seasons go into <bottomShelf> with <actionButton> tiles. <centerShelf
-	// center="true"> mis-renders when items overflow columnCount: with 5+
-	// seasons the row started at the screen edge and overlapped the poster on
-	// the left. <bottomShelf> handles overflow with horizontal scroll cleanly,
-	// while <actionButton> keeps the compact "label inside the button" look
-	// (vs. <moviePoster>'s stretched rectangle with label below).
-	if strings.Contains(s, "<centerShelf>") {
-		t.Errorf("show.xml must use <bottomShelf> for seasons, not <centerShelf>:\n%s", s)
+	// Seasons go into <centerShelf> with <actionButton> tiles, but center="true"
+	// is intentionally OFF. Earlier code had center="true" and 13-season Columbo
+	// overflowed past the left edge, drawing items on top of the poster. We
+	// tried <bottomShelf>+<actionButton> as a fallback, but ATV3 firmware 7.9
+	// mishandles horizontal-scroll focus there (focus drifts off-screen, button
+	// text gets clipped). center-shelf without centering left-aligns items and
+	// scrolls them cleanly via the remote.
+	if strings.Contains(s, `center="true"`) {
+		t.Errorf("show.xml must not enable center=\"true\" on the seasons shelf:\n%s", s)
+	}
+	if strings.Contains(s, "<bottomShelf>") {
+		t.Errorf("show.xml must use <centerShelf> for seasons, not <bottomShelf>:\n%s", s)
 	}
 }
 

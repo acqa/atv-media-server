@@ -27,7 +27,7 @@
   </table>
   {{- end }}
 
-  <bottomShelf>
+  <centerShelf>
     <shelf id="seasons" columnCount="{{ .Data.SeasonColumns }}">
       <sections>
         <shelfSection>
@@ -46,6 +46,6 @@
         </shelfSection>
       </sections>
     </shelf>
-  </bottomShelf>
+  </centerShelf>
 </itemDetail>
 {{- end }}
