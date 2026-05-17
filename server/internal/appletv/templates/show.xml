@@ -3,7 +3,7 @@
   {{- if .Data.HasBackdrop }}
   <header>
     <imageHeader>
-      <image insets="0, 0, 440, 0" required="true">{{ .BasePath }}/series-poster/{{ .Data.ID }}.jpg?type=backdrop&amp;size=w1280</image>
+      <image insets="0, 0, 440, 0" required="true">{{ .BasePath }}/art-series/{{ .Data.ID }}.jpg?type=backdrop&amp;size=w1280</image>
     </imageHeader>
   </header>
   {{- end }}
@@ -12,7 +12,7 @@
   <summary>{{ if .Data.Description }}{{ .Data.Description }}{{ else }}Description not found.{{ end }}</summary>
 
   {{- if .Data.HasPoster }}
-  <image style="moviePoster">{{ .BasePath }}/series-poster/{{ .Data.ID }}.jpg?type=poster&amp;size=w780</image>
+  <image style="moviePoster">{{ .BasePath }}/art-series/{{ .Data.ID }}.jpg?type=poster&amp;size=w780</image>
   {{- else }}
   <image style="moviePoster">resource://Poster.png</image>
   {{- end }}

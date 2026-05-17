@@ -125,14 +125,19 @@ func buildMux(cfg *config.Config, gen *appletv.XMLGenerator, deps Deps) *http.Se
 	mux.HandleFunc("/search.xml", searchHandler(gen))
 	mux.HandleFunc("/search-results.xml", searchResultsHandler(gen, deps.Store))
 	mux.HandleFunc("/stream/", streamHandler(deps.Store, deps.Preparer, cfg.DataDir))
+	// Image endpoints intentionally use a `/art*` prefix rather than the
+	// natural `/poster`/`/series-poster`/`/episode-still` so that ATV3's
+	// CFNetwork image cache treats a redeploy of metadata as a fresh URL.
+	// Earlier prefixes lingered with cached 302→missing_logo entries after a
+	// TMDb outage and never re-resolved even once posters were warmed.
 	if deps.Posters != nil {
-		mux.HandleFunc("/poster/", deps.Posters.Handler())
+		mux.HandleFunc("/art/", deps.Posters.Handler())
 	}
 	if deps.SeriesPosters != nil {
-		mux.HandleFunc("/series-poster/", deps.SeriesPosters.Handler())
+		mux.HandleFunc("/art-series/", deps.SeriesPosters.Handler())
 	}
 	if deps.EpisodeStills != nil {
-		mux.HandleFunc("/episode-still/", deps.EpisodeStills.Handler())
+		mux.HandleFunc("/art-still/", deps.EpisodeStills.Handler())
 	}
 	if deps.ScanState != nil {
 		mux.HandleFunc("/api/library/scan", deps.ScanState.ScanHandler())

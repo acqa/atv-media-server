@@ -67,7 +67,7 @@ func TestPreviewMoviesHandler_OrdersByUpdatedAtDesc(t *testing.T) {
 	s := string(body)
 	// All three must be present.
 	for _, id := range []string{"newnew000111", "midmid000111", "oldold000111"} {
-		if !strings.Contains(s, "/poster/"+id+".jpg?type=poster&amp;size=w500") {
+		if !strings.Contains(s, "/art/"+id+".jpg?type=poster&amp;size=w500") {
 			t.Errorf("missing poster URL for %s:\n%s", id, s)
 		}
 	}
@@ -95,10 +95,10 @@ func TestPreviewMoviesHandler_SkipsRowsWithoutArt(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	s := string(body)
-	if !strings.Contains(s, "/poster/withart00111.jpg") {
+	if !strings.Contains(s, "/art/withart00111.jpg") {
 		t.Errorf("expected poster URL for row with art:\n%s", s)
 	}
-	if strings.Contains(s, "/poster/noart0000111.jpg") {
+	if strings.Contains(s, "/art/noart0000111.jpg") {
 		t.Errorf("did not expect URL for row without poster/backdrop:\n%s", s)
 	}
 }
@@ -124,7 +124,7 @@ func TestPreviewSeriesHandler_OrdersByUpdatedAtDesc(t *testing.T) {
 		t.Fatalf("invalid XML: %v\n%s", err, body)
 	}
 	s := string(body)
-	if !strings.Contains(s, "/series-poster/newshowabc12.jpg?type=poster&amp;size=w500") {
+	if !strings.Contains(s, "/art-series/newshowabc12.jpg?type=poster&amp;size=w500") {
 		t.Errorf("missing series poster URL:\n%s", s)
 	}
 	iNew := strings.Index(s, "newshowabc12")

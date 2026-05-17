@@ -19,7 +19,7 @@
           <subtitle>{{ .Year }}</subtitle>
           {{- end }}
           {{- if .HasPoster }}
-          <image>{{ $.BasePath }}/poster/{{ .ID }}.jpg?type=poster&amp;size=w500</image>
+          <image>{{ $.BasePath }}/art/{{ .ID }}.jpg?type=poster&amp;size=w500</image>
           {{- end }}
           <defaultImage>resource://Poster.png</defaultImage>
         </moviePoster>

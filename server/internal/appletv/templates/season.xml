@@ -19,7 +19,7 @@
           <subtitle>{{ .DurationStr }}</subtitle>
           {{- end }}
           {{- if .HasStill }}
-          <image>{{ $.BasePath }}/episode-still/{{ .ID }}.jpg?size=w780</image>
+          <image>{{ $.BasePath }}/art-still/{{ .ID }}.jpg?size=w780</image>
           {{- end }}
           <defaultImage>resource://16x9.png</defaultImage>
         </sixteenByNinePoster>

@@ -2,7 +2,7 @@
 <preview>
   <paradePreview inOrder="true">
     {{- range .Data.PosterIDs }}
-    <image>{{ $.BasePath }}/series-poster/{{ . }}.jpg?type=poster&amp;size=w500</image>
+    <image>{{ $.BasePath }}/art-series/{{ . }}.jpg?type=poster&amp;size=w500</image>
     {{- end }}
   </paradePreview>
 </preview>

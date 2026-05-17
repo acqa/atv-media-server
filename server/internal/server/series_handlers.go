@@ -252,7 +252,7 @@ func NewSeriesPosterCache(root string, store *storage.Store) *SeriesPosterCache 
 	return &SeriesPosterCache{PosterCache: c, store: store}
 }
 
-// Handler returns /series-poster/{id}.jpg. Same query semantics as movie posters.
+// Handler returns /art-series/{id}.jpg. Same query semantics as movie posters.
 func (s *SeriesPosterCache) Handler() http.HandlerFunc {
 	return s.posterHandlerFor(func(id string) (poster, backdrop string, ok bool) {
 		row, err := s.store.GetSeries(id)
@@ -275,7 +275,7 @@ func NewEpisodeStillCache(root string, store *storage.Store) *EpisodeStillCache 
 	return &EpisodeStillCache{PosterCache: c, store: store}
 }
 
-// Handler returns /episode-still/{id}.jpg. Only accepts size=, no type.
+// Handler returns /art-still/{id}.jpg. Only accepts size=, no type.
 func (s *EpisodeStillCache) Handler() http.HandlerFunc {
 	return s.posterHandlerFor(func(id string) (poster, backdrop string, ok bool) {
 		row, err := s.store.GetEpisode(id)

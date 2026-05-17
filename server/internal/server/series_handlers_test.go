@@ -93,11 +93,11 @@ func TestSeriesHandler_PopulatedListsSeries(t *testing.T) {
 	if strings.Contains(s, "onPlay=") {
 		t.Errorf("series grid should not register onPlay:\n%s", s)
 	}
-	if !strings.Contains(s, "/series-poster/ser111aaa222.jpg?type=poster&amp;size=w500") {
+	if !strings.Contains(s, "/art-series/ser111aaa222.jpg?type=poster&amp;size=w500") {
 		t.Errorf("missing poster URL for Breaking Bad:\n%s", s)
 	}
 	// The Wire has no poster_path/backdrop_path — no <image> tag.
-	if strings.Contains(s, "/series-poster/ser333bbb444.jpg") {
+	if strings.Contains(s, "/art-series/ser333bbb444.jpg") {
 		t.Errorf("unexpected poster URL for The Wire (no poster_path):\n%s", s)
 	}
 }
@@ -138,9 +138,9 @@ func TestShowHandler_RendersFullDetails(t *testing.T) {
 	for _, want := range []string{
 		"<itemDetailWithImageHeader",
 		"<imageHeader>",
-		"/series-poster/" + id + ".jpg?type=backdrop&amp;size=w1280",
+		"/art-series/" + id + ".jpg?type=backdrop&amp;size=w1280",
 		`<image style="moviePoster">`,
-		"/series-poster/" + id + ".jpg?type=poster&amp;size=w780",
+		"/art-series/" + id + ".jpg?type=poster&amp;size=w780",
 		"Breaking Bad",
 		"(2008)",
 		"<summary>Chemistry teacher turns drug lord</summary>",
@@ -216,7 +216,7 @@ func TestSeasonHandler_RendersGridOfStills(t *testing.T) {
 		"<title>1. Pilot</title>",
 		"<title>2. Cat's in the Bag</title>",
 		"<subtitle>50m</subtitle>", // Duration 3000s = 50m
-		"/episode-still/e1aaa111aaa.jpg?size=w780",
+		"/art-still/e1aaa111aaa.jpg?size=w780",
 		"/episode.xml?id=e1aaa111aaa",
 		"/play.xml?id=e1aaa111aaa",
 		"<defaultImage>resource://16x9.png</defaultImage>",
@@ -226,7 +226,7 @@ func TestSeasonHandler_RendersGridOfStills(t *testing.T) {
 		}
 	}
 	// Episode 2 has no still — must not emit an <image> URL for it.
-	if strings.Contains(s, "/episode-still/e2bbb222bbb.jpg") {
+	if strings.Contains(s, "/art-still/e2bbb222bbb.jpg") {
 		t.Errorf("unexpected still URL for episode without StillPath:\n%s", s)
 	}
 }
@@ -270,7 +270,7 @@ func TestEpisodeHandler_RendersFullDetails(t *testing.T) {
 		"The Wire — S01E03: The Buys",
 		"<summary>Detectives plan a sting</summary>",
 		`<image style="sixteenByNinePoster">`,
-		"/episode-still/" + epID + ".jpg?size=w780",
+		"/art-still/" + epID + ".jpg?size=w780",
 		"<label>1h 0m</label>",
 		"<mediaBadges>",
 		`src="https://appletv.redbull.tv/assets/badges/1080.png"`,

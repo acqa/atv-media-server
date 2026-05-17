@@ -143,11 +143,11 @@ func TestMoviesHandler_PopulatedListsMovies(t *testing.T) {
 		t.Errorf("missing onPlay link for Matrix:\n%s", s)
 	}
 	// Poster URL only rendered when the row has poster/backdrop set.
-	if !strings.Contains(s, "/poster/abc123def456.jpg?type=poster&amp;size=w500") {
+	if !strings.Contains(s, "/art/abc123def456.jpg?type=poster&amp;size=w500") {
 		t.Errorf("missing poster URL for Matrix (which has poster_path set):\n%s", s)
 	}
 	// Inception has no poster_path/backdrop_path — no <image> tag, only <defaultImage>.
-	if strings.Contains(s, "/poster/fedcba987654.jpg") {
+	if strings.Contains(s, "/art/fedcba987654.jpg") {
 		t.Errorf("unexpected poster URL for Inception (no poster_path):\n%s", s)
 	}
 }
@@ -189,7 +189,7 @@ func TestMovieHandler_RendersFullDetails(t *testing.T) {
 		"(1982)",
 		"<summary>Detective hunts replicants</summary>",
 		`<image style="moviePoster">`,
-		"/poster/xyz000abc111.jpg?type=poster&amp;size=w780",
+		"/art/xyz000abc111.jpg?type=poster&amp;size=w780",
 		"<label>1h 57m</label>",
 		"<mediaBadges>",
 		"<additionalMediaBadges>",

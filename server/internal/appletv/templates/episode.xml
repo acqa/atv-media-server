@@ -4,7 +4,7 @@
   <summary>{{ if .Data.Description }}{{ .Data.Description }}{{ else }}Description not found.{{ end }}</summary>
 
   {{- if .Data.HasStill }}
-  <image style="sixteenByNinePoster">{{ .BasePath }}/episode-still/{{ .Data.ID }}.jpg?size=w780</image>
+  <image style="sixteenByNinePoster">{{ .BasePath }}/art-still/{{ .Data.ID }}.jpg?size=w780</image>
   {{- else }}
   <image style="sixteenByNinePoster">resource://16x9.png</image>
   {{- end }}

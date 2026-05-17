@@ -46,7 +46,7 @@ func previewMoviesHandler(gen *appletv.XMLGenerator, store *storage.Store) http.
 
 // previewSeriesHandler returns a <paradePreview> of the most recently scanned
 // series posters. Symmetrical to previewMoviesHandler but hits the series
-// table and the /series-poster/ endpoint.
+// table and the /art-series/ endpoint.
 func previewSeriesHandler(gen *appletv.XMLGenerator, store *storage.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

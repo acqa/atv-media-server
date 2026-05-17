@@ -59,7 +59,7 @@ var allowedSizes = map[string]struct{}{
 // ok=false signals "id not found" → 404.
 type PathResolver func(id string) (poster, backdrop string, ok bool)
 
-// Handler returns the /poster/{id}.jpg handler for movies.
+// Handler returns the /art/{id}.jpg handler for movies.
 // Query: type=backdrop|poster (default backdrop), size=w300|w500|w780|w1280|original (default w780).
 func (p *PosterCache) Handler() http.HandlerFunc {
 	return p.posterHandlerFor(func(id string) (string, string, bool) {
@@ -121,7 +121,7 @@ func (p *PosterCache) posterHandlerFor(resolve PathResolver, urlPrefix string) h
 			relPath = poster
 		}
 		if relPath == "" {
-			http.Redirect(w, r, "/assets/images/missing_logo.png", http.StatusFound)
+			redirectMissing(w, r)
 			return
 		}
 
@@ -132,12 +132,22 @@ func (p *PosterCache) posterHandlerFor(resolve PathResolver, urlPrefix string) h
 		sourceURL := p.imageBaseURL + "/" + size + relPath
 		if err := p.ensureCached(r.Context(), cacheFile, sourceURL); err != nil {
 			logging.Warn(urlPrefix+" fetch:", err)
-			http.Redirect(w, r, "/assets/images/missing_logo.png", http.StatusFound)
+			redirectMissing(w, r)
 			return
 		}
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.ServeFile(w, r, cacheFile)
 	}
+}
+
+// redirectMissing sends a 302 to the bundled placeholder. We disable client
+// caching of the redirect itself so that once a poster is warmed (or the row
+// later gets a poster_path), the next request actually re-resolves instead of
+// silently re-using the cached placeholder. ATV3's CFNetwork was observed
+// holding 302→missing_logo entries for an entire session otherwise.
+func redirectMissing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	http.Redirect(w, r, "/assets/images/missing_logo.png", http.StatusFound)
 }
 
 // ensureCached returns nil if cacheFile already exists (size > 0) or has been
