@@ -187,6 +187,138 @@ func TestShowHandler_WithoutBackdropSkipsHeader(t *testing.T) {
 	}
 }
 
+func TestSeasonHandler_RendersGridOfStills(t *testing.T) {
+	env := newTestEnv(t)
+	const showID = "showbb111111"
+	upsertSeries(t, env.store, storage.SeriesRow{ID: showID, Title: "Breaking Bad"})
+	upsertEpisode(t, env.store, storage.EpisodeRow{
+		ID: "e1aaa111aaa", SeriesID: showID, Season: 1, Episode: 1,
+		Title: "Pilot", StillPath: "/still1.jpg", Duration: 3000,
+	})
+	upsertEpisode(t, env.store, storage.EpisodeRow{
+		ID: "e2bbb222bbb", SeriesID: showID, Season: 1, Episode: 2,
+		Title: "Cat's in the Bag",
+	})
+
+	srv := httptest.NewServer(env.mux)
+	t.Cleanup(srv.Close)
+	resp, _ := http.Get(srv.URL + "/season.xml?show=" + showID + "&s=1")
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	if err := xml.Unmarshal(body, new(interface{})); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, body)
+	}
+	s := string(body)
+	for _, want := range []string{
+		"<sixteenByNinePoster",
+		`id="episode-e1aaa111aaa"`,
+		`id="episode-e2bbb222bbb"`,
+		"<title>1. Pilot</title>",
+		"<title>2. Cat's in the Bag</title>",
+		"<subtitle>50m</subtitle>", // Duration 3000s = 50m
+		"/episode-still/e1aaa111aaa.jpg?size=w780",
+		"/episode.xml?id=e1aaa111aaa",
+		"/play.xml?id=e1aaa111aaa",
+		"<defaultImage>resource://16x9.png</defaultImage>",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("missing %q in body:\n%s", want, s)
+		}
+	}
+	// Episode 2 has no still — must not emit an <image> URL for it.
+	if strings.Contains(s, "/episode-still/e2bbb222bbb.jpg") {
+		t.Errorf("unexpected still URL for episode without StillPath:\n%s", s)
+	}
+}
+
+func TestEpisodeHandler_NotFound(t *testing.T) {
+	env := newTestEnv(t)
+	srv := httptest.NewServer(env.mux)
+	t.Cleanup(srv.Close)
+	resp, _ := http.Get(srv.URL + "/episode.xml?id=nope")
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(body), "Not Found") {
+		t.Errorf("expected Not Found dialog:\n%s", body)
+	}
+}
+
+func TestEpisodeHandler_RendersFullDetails(t *testing.T) {
+	env := newTestEnv(t)
+	const showID = "showcc222222"
+	const epID = "eeeppp1111aa"
+	upsertSeries(t, env.store, storage.SeriesRow{ID: showID, Title: "The Wire"})
+	upsertEpisode(t, env.store, storage.EpisodeRow{
+		ID: epID, SeriesID: showID, Season: 1, Episode: 3,
+		Title: "The Buys", Description: "Detectives plan a sting",
+		StillPath: "/still.jpg", Duration: 3600,
+		VideoCodec: "h264", AudioCodec: "ac3",
+		VideoHeight: 1080, AudioChannels: 6,
+	})
+
+	srv := httptest.NewServer(env.mux)
+	t.Cleanup(srv.Close)
+	resp, _ := http.Get(srv.URL + "/episode.xml?id=" + epID)
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	if err := xml.Unmarshal(body, new(interface{})); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, body)
+	}
+	s := string(body)
+	for _, want := range []string{
+		"<itemDetail",
+		"The Wire — S01E03: The Buys",
+		"<summary>Detectives plan a sting</summary>",
+		`<image style="sixteenByNinePoster">`,
+		"/episode-still/" + epID + ".jpg?size=w780",
+		"<label>1h 0m</label>",
+		"<mediaBadges>",
+		`src="https://appletv.redbull.tv/assets/badges/1080.png"`,
+		`src="https://appletv.redbull.tv/assets/badges/h264.png"`,
+		`src="https://appletv.redbull.tv/assets/badges/ac3.png"`,
+		`src="https://appletv.redbull.tv/assets/badges/6.png"`,
+		"<actionButton",
+		`id="play-` + epID + `-a0"`,
+		"/play.xml?id=" + epID + "&amp;audio=0",
+		"<title>Play</title>",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("missing %q in body:\n%s", want, s)
+		}
+	}
+}
+
+func TestEpisodeHandler_NoDescriptionFallback(t *testing.T) {
+	env := newTestEnv(t)
+	const showID = "showdd333333"
+	const epID = "barebareepis"
+	upsertSeries(t, env.store, storage.SeriesRow{ID: showID, Title: "Plain"})
+	upsertEpisode(t, env.store, storage.EpisodeRow{
+		ID: epID, SeriesID: showID, Season: 2, Episode: 5,
+	})
+
+	srv := httptest.NewServer(env.mux)
+	t.Cleanup(srv.Close)
+	resp, _ := http.Get(srv.URL + "/episode.xml?id=" + epID)
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	if !strings.Contains(s, "Description not found") {
+		t.Errorf("missing fallback description:\n%s", s)
+	}
+	// No still / no codecs / no duration — neither <image style="sixteenByNinePoster"> nor <table> should appear.
+	if strings.Contains(s, `<image style="sixteenByNinePoster">`) {
+		t.Errorf("unexpected still <image> for episode without StillPath:\n%s", s)
+	}
+	if strings.Contains(s, "<table>") {
+		t.Errorf("unexpected <table> when no duration/quality:\n%s", s)
+	}
+	// Title without episode-title falls back to plain SxxExx form (no colon-suffix).
+	if !strings.Contains(s, "<title>Plain — S02E05</title>") {
+		t.Errorf("expected title without ': <Title>' suffix:\n%s", s)
+	}
+}
+
 func TestShowHandler_SeasonColumnsCappedAtFive(t *testing.T) {
 	env := newTestEnv(t)
 	const id = "longshow1234"
