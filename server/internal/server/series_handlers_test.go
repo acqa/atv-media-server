@@ -145,7 +145,7 @@ func TestShowHandler_RendersFullDetails(t *testing.T) {
 		"<starRating>",
 		"<percentage>95</percentage>",
 		"<bottomShelf>",
-		`columnCount="2"`, // 2 seasons → 2 columns
+		`columnCount="5"`, // fixed grid: 2 seasons still get 5-column shelf, tiles 1/5 wide
 		"<moviePoster",
 		`id="season-` + id + `-1"`,
 		`id="season-` + id + `-2"`,
@@ -316,6 +316,26 @@ func TestEpisodeHandler_NoDescriptionFallback(t *testing.T) {
 	// Title without episode-title falls back to plain SxxExx form (no colon-suffix).
 	if !strings.Contains(s, "<title>Plain — S02E05</title>") {
 		t.Errorf("expected title without ': <Title>' suffix:\n%s", s)
+	}
+}
+
+func TestShowHandler_SingleSeasonCentred(t *testing.T) {
+	env := newTestEnv(t)
+	const id = "oneseason111"
+	upsertSeries(t, env.store, storage.SeriesRow{ID: id, Title: "Mini"})
+	upsertEpisode(t, env.store, storage.EpisodeRow{
+		ID: "epm1aaa11111", SeriesID: id, Season: 1, Episode: 1,
+	})
+	srv := httptest.NewServer(env.mux)
+	t.Cleanup(srv.Close)
+	resp, _ := http.Get(srv.URL + "/show.xml?id=" + id)
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	// Single-season shows keep columnCount=1 so the lone tile renders centred
+	// rather than crammed into the left 1/5 of the row.
+	if !strings.Contains(s, `columnCount="1"`) {
+		t.Errorf("expected columnCount=1 for single-season show:\n%s", s)
 	}
 }
 

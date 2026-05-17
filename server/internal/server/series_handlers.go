@@ -127,12 +127,15 @@ func showHandler(gen *appletv.XMLGenerator, store *storage.Store) http.HandlerFu
 			gen.RenderError(w, r, appletv.ErrorData{Title: "DB Error", Description: err.Error()})
 			return
 		}
-		cols := len(seasons)
-		if cols > 5 {
-			cols = 5
-		}
-		if cols < 1 {
-			cols = 1 // shelf needs >=1 even if seasons is empty, to keep XML valid
+		// Fixed-size tiles match PlexConnect's pattern: regardless of how many
+		// seasons a show has, each season tile occupies 1/5 of the row. With
+		// variable columnCount=len(seasons), 2- and 4-season shows stretched
+		// their tiles across the whole screen, leaving big visual gaps. The
+		// only special case is a single season, which looks better centred
+		// alone (columnCount=1) than wedged into the left fifth of the row.
+		cols := 5
+		if len(seasons) == 1 {
+			cols = 1
 		}
 		gen.Render(w, r, "show.xml", ShowPage{
 			ID: s.ID, Title: s.Title, Year: s.Year, Description: s.Description,
