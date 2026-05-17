@@ -134,7 +134,12 @@ func TestPreviewSeriesHandler_OrdersByUpdatedAtDesc(t *testing.T) {
 	}
 }
 
-func TestMainHandler_LinksToPreviewEndpoints(t *testing.T) {
+// Regression: ATV3 firmware 7.9 rejects <preview><link> inside <navigationItem>
+// with a generic "sample-xml is currently unavailable" error, before even
+// requesting the preview URL. The preview-* endpoints stay registered for
+// future use (e.g. a <listWithPreview>-based home screen), but main.xml MUST
+// NOT reference them from <navigationItem>.
+func TestMainHandler_NoPreviewLinksInNavbar(t *testing.T) {
 	env := newTestEnv(t)
 	srv := httptest.NewServer(env.mux)
 	t.Cleanup(srv.Close)
@@ -142,13 +147,10 @@ func TestMainHandler_LinksToPreviewEndpoints(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	s := string(body)
-	for _, want := range []string{
-		"<preview>",
-		"<link>https://appletv.redbull.tv/preview-movies.xml</link>",
-		"<link>https://appletv.redbull.tv/preview-series.xml</link>",
-	} {
-		if !strings.Contains(s, want) {
-			t.Errorf("missing %q in main.xml:\n%s", want, s)
-		}
+	if strings.Contains(s, "<preview>") {
+		t.Errorf("main.xml must not embed <preview> — ATV3 fails the page:\n%s", s)
+	}
+	if strings.Contains(s, "/preview-movies.xml") || strings.Contains(s, "/preview-series.xml") {
+		t.Errorf("main.xml must not reference preview endpoints:\n%s", s)
 	}
 }
