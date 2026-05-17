@@ -27,25 +27,25 @@
   </table>
   {{- end }}
 
-  <centerShelf>
-    <shelf id="seasons" columnCount="{{ .Data.SeasonColumns }}" center="true">
+  <bottomShelf>
+    <shelf id="seasons" columnCount="{{ .Data.SeasonColumns }}">
       <sections>
         <shelfSection>
           <items>
             {{- range .Data.Seasons }}
-            <actionButton
+            <moviePoster
                 id="season-{{ $.Data.ID }}-{{ . }}"
+                alwaysShowTitles="true"
                 onSelect="atvutils.loadURL('{{ $.BasePath }}/season.xml?show={{ $.Data.ID }}&amp;s={{ . }}');"
                 onPlay="atvutils.loadURL('{{ $.BasePath }}/season.xml?show={{ $.Data.ID }}&amp;s={{ . }}');">
               <title>Season {{ . }}</title>
-              <image>resource://Folder.png</image>
-              <focusedImage>resource://Folder.png</focusedImage>
-            </actionButton>
+              <defaultImage>resource://Folder.png</defaultImage>
+            </moviePoster>
             {{- end }}
           </items>
         </shelfSection>
       </sections>
     </shelf>
-  </centerShelf>
+  </bottomShelf>
 </itemDetail>
 {{- end }}
