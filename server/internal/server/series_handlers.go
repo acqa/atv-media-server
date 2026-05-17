@@ -36,6 +36,7 @@ type ShowPage struct {
 	HasRating     bool
 	RatingPercent int
 	Seasons       []int
+	SeasonColumns int // visible columns in the centerShelf — capped at 5 to keep buttons readable
 }
 
 // SeasonPage is the payload for season.xml.
@@ -127,6 +128,13 @@ func showHandler(gen *appletv.XMLGenerator, store *storage.Store) http.HandlerFu
 			gen.RenderError(w, r, appletv.ErrorData{Title: "DB Error", Description: err.Error()})
 			return
 		}
+		cols := len(seasons)
+		if cols > 5 {
+			cols = 5
+		}
+		if cols < 1 {
+			cols = 1 // shelf needs >=1 even if seasons is empty, to keep XML valid
+		}
 		gen.Render(w, r, "show.xml", ShowPage{
 			ID: s.ID, Title: s.Title, Year: s.Year, Description: s.Description,
 			HasPoster:     s.PosterPath != "" || s.BackdropPath != "",
@@ -135,6 +143,7 @@ func showHandler(gen *appletv.XMLGenerator, store *storage.Store) http.HandlerFu
 			HasRating:     s.Rating > 0,
 			RatingPercent: RatingPercent(s.Rating),
 			Seasons:       seasons,
+			SeasonColumns: cols,
 		})
 	}
 }
