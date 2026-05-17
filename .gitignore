@@ -45,3 +45,6 @@ problem.txt
 
 # Claude Code session metadata
 .claude/
+
+# Local planning notes — not part of the shipped project.
+.notes/

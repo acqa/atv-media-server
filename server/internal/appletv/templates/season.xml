@@ -1,31 +1,31 @@
 {{ define "body" -}}
-<listScrollerSplit id="{{ .BodyID }}">
+<scroller id="{{ .BodyID }}">
   <header>
     <simpleHeader accessibilityLabel="Season {{ .Data.Season }}">
       <title>Season {{ .Data.Season }}</title>
     </simpleHeader>
   </header>
-  <menu>
-    <sections>
-      <menuSection>
-        <header>
-          <textDivider alignment="left" accessibilityLabel="Episodes">
-            <title>Episodes</title>
-          </textDivider>
-        </header>
-        <items>
-          {{- range .Data.Episodes }}
-          <oneLineMenuItem
-              id="episode-{{ .ID }}"
-              accessibilityLabel="S{{ printf "%02d" .Season }}E{{ printf "%02d" .Episode }}"
-              onSelect="atvutils.loadURL('{{ $.BasePath }}/episode.xml?id={{ .ID }}');"
-              onPlay="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ .ID }}');">
-            <label>S{{ printf "%02d" .Season }}E{{ printf "%02d" .Episode }}{{ if .Title }} — {{ .Title }}{{ end }}</label>
-          </oneLineMenuItem>
+  <items>
+    <grid columnCount="3" id="episodes-grid">
+      <items>
+        {{- range .Data.Episodes }}
+        <sixteenByNinePoster
+            id="episode-{{ .ID }}"
+            alwaysShowTitles="true"
+            onSelect="atvutils.loadURL('{{ $.BasePath }}/episode.xml?id={{ .ID }}');"
+            onPlay="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ .ID }}');">
+          <title>{{ .Episode }}.{{ if .Title }} {{ .Title }}{{ else }} Episode {{ .Episode }}{{ end }}</title>
+          {{- if .DurationStr }}
+          <subtitle>{{ .DurationStr }}</subtitle>
           {{- end }}
-        </items>
-      </menuSection>
-    </sections>
-  </menu>
-</listScrollerSplit>
+          {{- if .HasStill }}
+          <image>{{ $.BasePath }}/art-still/{{ .ID }}.jpg?size=w780</image>
+          {{- end }}
+          <defaultImage>resource://16x9.png</defaultImage>
+        </sixteenByNinePoster>
+        {{- end }}
+      </items>
+    </grid>
+  </items>
+</scroller>
 {{- end }}

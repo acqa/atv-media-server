@@ -1,0 +1,38 @@
+# Third-party licenses
+
+This project bundles third-party assets and code under the licenses below.
+
+## PlexConnect — media badge icons
+
+The PNG badges in [server/internal/server/assets/badges/](server/internal/server/assets/badges/) (resolution, video/audio codec, channel-count icons) are copied verbatim from the [PlexConnect](https://github.com/iBaa/PlexConnect) project, originally located at `assets/thumbnails/MediaBadges/`.
+
+PlexConnect is distributed under the MIT License:
+
+```
+PlexConnect - licensed under the MIT License
+
+Copyright (c) 2013
+    - Baa <http://forums.plexapp.com/index.php/user/41519-baa/>
+    - Roidy <http://forums.plexapp.com/index.php/user/51394-roidy/>
+    ... and others (see history/commits in <https://github.com/iBaa/PlexConnect>)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+The XML templates under [server/internal/appletv/templates/](server/internal/appletv/templates/) and the navigation framework in [server/internal/server/assets/application.js](server/internal/server/assets/application.js) draw heavy inspiration from PlexConnect and the related [ghokun/appletv3-iptv](https://github.com/ghokun/appletv3-iptv) project, but were rewritten for this project.

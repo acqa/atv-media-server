@@ -26,12 +26,16 @@ type SeriesPage struct {
 
 // ShowPage is the payload for show.xml.
 type ShowPage struct {
-	ID          string
-	Title       string
-	Year        int
-	Description string
-	HasPoster   bool
-	Seasons     []int
+	ID            string
+	Title         string
+	Year          int
+	Description   string
+	HasPoster     bool
+	Rating        float64
+	HasRating     bool
+	RatingPercent int
+	Seasons       []int
+	SeasonColumns int // visible columns in the centerShelf — capped at 5 to keep buttons readable
 }
 
 // SeasonPage is the payload for season.xml.
@@ -43,11 +47,12 @@ type SeasonPage struct {
 
 // EpisodeView projects storage.EpisodeRow for grid templates.
 type EpisodeView struct {
-	ID       string
-	Season   int
-	Episode  int
-	Title    string
-	HasStill bool
+	ID          string
+	Season      int
+	Episode     int
+	Title       string
+	HasStill    bool
+	DurationStr string // "23m"; empty when unknown
 }
 
 // EpisodePage is the payload for episode.xml.
@@ -59,7 +64,10 @@ type EpisodePage struct {
 	Title       string
 	Description string
 	HasStill    bool
-	AudioTracks []int // 0..N-1 — drives "Audio N" buttons
+	DurationStr string   // "23m"; empty when unknown
+	QualityStr  string   // "1080p · H.264 · AC3"; empty when unknown
+	Badges      []string // PNG filenames under /assets/badges/; empty when unknown
+	AudioTracks []int    // 0..N-1 — drives "Audio N" buttons
 }
 
 func seriesViewFrom(r storage.SeriesRow) SeriesView {
@@ -73,6 +81,7 @@ func episodeViewFrom(r storage.EpisodeRow) EpisodeView {
 	return EpisodeView{
 		ID: r.ID, Season: r.Season, Episode: r.Episode,
 		Title: r.Title, HasStill: r.StillPath != "",
+		DurationStr: FormatDuration(r.Duration),
 	}
 }
 
@@ -118,10 +127,24 @@ func showHandler(gen *appletv.XMLGenerator, store *storage.Store) http.HandlerFu
 			gen.RenderError(w, r, appletv.ErrorData{Title: "DB Error", Description: err.Error()})
 			return
 		}
+		// Fixed-size tiles match PlexConnect's pattern: regardless of how many
+		// seasons a show has, each season tile occupies 1/5 of the row. With
+		// variable columnCount=len(seasons), 2- and 4-season shows stretched
+		// their tiles across the whole screen, leaving big visual gaps. The
+		// only special case is a single season, which looks better centred
+		// alone (columnCount=1) than wedged into the left fifth of the row.
+		cols := 5
+		if len(seasons) == 1 {
+			cols = 1
+		}
 		gen.Render(w, r, "show.xml", ShowPage{
 			ID: s.ID, Title: s.Title, Year: s.Year, Description: s.Description,
-			HasPoster: s.PosterPath != "" || s.BackdropPath != "",
-			Seasons:   seasons,
+			HasPoster:     s.PosterPath != "" || s.BackdropPath != "",
+			Rating:        s.Rating,
+			HasRating:     s.Rating > 0,
+			RatingPercent: RatingPercent(s.Rating),
+			Seasons:       seasons,
+			SeasonColumns: cols,
 		})
 	}
 }
@@ -173,6 +196,9 @@ func episodeHandler(gen *appletv.XMLGenerator, store *storage.Store) http.Handle
 		gen.Render(w, r, "episode.xml", EpisodePage{
 			ID: e.ID, ShowTitle: show.Title, Season: e.Season, Episode: e.Episode,
 			Title: e.Title, Description: e.Description, HasStill: e.StillPath != "",
+			DurationStr: FormatDuration(e.Duration),
+			QualityStr:  FormatQuality(e.VideoHeight, e.VideoCodec, e.AudioCodec, e.AudioChannels),
+			Badges:      BadgeFilenames(e.VideoHeight, e.VideoCodec, e.AudioCodec, e.AudioChannels),
 			AudioTracks: audioRange(e.AudioCount),
 		})
 	}
@@ -227,7 +253,7 @@ func NewSeriesPosterCache(root string, store *storage.Store) *SeriesPosterCache 
 	return &SeriesPosterCache{PosterCache: c, store: store}
 }
 
-// Handler returns /series-poster/{id}.jpg. Same query semantics as movie posters.
+// Handler returns /art-series/{id}.jpg. Same query semantics as movie posters.
 func (s *SeriesPosterCache) Handler() http.HandlerFunc {
 	return s.posterHandlerFor(func(id string) (poster, backdrop string, ok bool) {
 		row, err := s.store.GetSeries(id)
@@ -250,7 +276,7 @@ func NewEpisodeStillCache(root string, store *storage.Store) *EpisodeStillCache 
 	return &EpisodeStillCache{PosterCache: c, store: store}
 }
 
-// Handler returns /episode-still/{id}.jpg. Only accepts size=, no type.
+// Handler returns /art-still/{id}.jpg. Only accepts size=, no type.
 func (s *EpisodeStillCache) Handler() http.HandlerFunc {
 	return s.posterHandlerFor(func(id string) (poster, backdrop string, ok bool) {
 		row, err := s.store.GetEpisode(id)

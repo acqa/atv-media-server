@@ -35,6 +35,8 @@ type MediaRow struct {
 	Duration       int    // seconds; 0 = unknown
 	VideoCodec     string // populated in Phase 3
 	AudioCodec     string // populated in Phase 3
+	VideoHeight    int    // pixels (1080/720/...); 0 = unknown
+	AudioChannels  int    // stream channels (2/6/8); 0 = unknown
 	AudioCount     int    // number of audio streams in the source (default 1)
 	NeedsTranscode bool   // Phase 3: false means PrepareHLS uses remux
 	UpdatedAt      time.Time
@@ -192,6 +194,13 @@ var migrations = []string{
 	// "Audio N" buttons in the UI; defaults to 1 for legacy rows.
 	`ALTER TABLE media ADD COLUMN audio_count INTEGER NOT NULL DEFAULT 1;
 	 ALTER TABLE episodes ADD COLUMN audio_count INTEGER NOT NULL DEFAULT 1;`,
+	// 006 — resolution + audio-channel count, used to render
+	// "1080p · H.264 · AC3 5.1" in the detail card. Legacy rows default to 0
+	// ("unknown") and pick up real values on the next ffprobe pass.
+	`ALTER TABLE media    ADD COLUMN video_height   INTEGER NOT NULL DEFAULT 0;
+	 ALTER TABLE media    ADD COLUMN audio_channels INTEGER NOT NULL DEFAULT 0;
+	 ALTER TABLE episodes ADD COLUMN video_height   INTEGER NOT NULL DEFAULT 0;
+	 ALTER TABLE episodes ADD COLUMN audio_channels INTEGER NOT NULL DEFAULT 0;`,
 }
 
 // UpsertMedia inserts or replaces a row keyed by id. UpdatedAt is set to now
@@ -208,8 +217,9 @@ func (s *Store) UpsertMedia(m MediaRow) error {
 	}
 	_, err := s.db.Exec(`
 		INSERT INTO media (id, path, type, title, year, description, poster_path, backdrop_path,
-			rating, tmdb_id, duration, video_codec, audio_codec, audio_count, needs_transcode, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			rating, tmdb_id, duration, video_codec, audio_codec, video_height, audio_channels,
+			audio_count, needs_transcode, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			path = excluded.path,
 			type = excluded.type,
@@ -223,11 +233,14 @@ func (s *Store) UpsertMedia(m MediaRow) error {
 			duration = excluded.duration,
 			video_codec = excluded.video_codec,
 			audio_codec = excluded.audio_codec,
+			video_height = excluded.video_height,
+			audio_channels = excluded.audio_channels,
 			audio_count = excluded.audio_count,
 			needs_transcode = excluded.needs_transcode,
 			updated_at = excluded.updated_at
 	`, m.ID, m.Path, m.Type, m.Title, m.Year, m.Description, m.PosterPath, m.BackdropPath,
-		m.Rating, m.TMDbID, m.Duration, m.VideoCodec, m.AudioCodec, m.AudioCount, m.NeedsTranscode, m.UpdatedAt)
+		m.Rating, m.TMDbID, m.Duration, m.VideoCodec, m.AudioCodec, m.VideoHeight, m.AudioChannels,
+		m.AudioCount, m.NeedsTranscode, m.UpdatedAt)
 	return err
 }
 
@@ -239,6 +252,18 @@ func (s *Store) GetMedia(id string) (MediaRow, error) {
 // ListMovies returns all rows with type='movie' ordered by title (case-insensitive), year.
 func (s *Store) ListMovies() ([]MediaRow, error) {
 	return queryRows(s.db, `SELECT `+mediaColumns+` FROM media WHERE type = 'movie' ORDER BY title COLLATE NOCASE, year`)
+}
+
+// ListRecentMovies returns up to n movie rows ordered by updated_at DESC, then
+// id (stable tiebreak for newly-added rows that share a timestamp). Used by the
+// home-screen preview carousel.
+func (s *Store) ListRecentMovies(n int) ([]MediaRow, error) {
+	if n <= 0 {
+		return nil, nil
+	}
+	return queryRows(s.db,
+		`SELECT `+mediaColumns+` FROM media WHERE type = 'movie' ORDER BY updated_at DESC, id LIMIT ?`,
+		n)
 }
 
 // SearchMovies returns movies whose title contains term (case-insensitive).
@@ -268,7 +293,8 @@ func (s *Store) DeleteMedia(id string) error {
 }
 
 const mediaColumns = `id, path, type, title, year, description, poster_path, backdrop_path,
-	rating, tmdb_id, duration, video_codec, audio_codec, audio_count, needs_transcode, updated_at`
+	rating, tmdb_id, duration, video_codec, audio_codec, video_height, audio_channels,
+	audio_count, needs_transcode, updated_at`
 
 type rowScanner interface {
 	Scan(dest ...interface{}) error
@@ -278,7 +304,8 @@ func scanOne(row rowScanner) (MediaRow, error) {
 	var m MediaRow
 	err := row.Scan(&m.ID, &m.Path, &m.Type, &m.Title, &m.Year, &m.Description,
 		&m.PosterPath, &m.BackdropPath, &m.Rating, &m.TMDbID, &m.Duration,
-		&m.VideoCodec, &m.AudioCodec, &m.AudioCount, &m.NeedsTranscode, &m.UpdatedAt)
+		&m.VideoCodec, &m.AudioCodec, &m.VideoHeight, &m.AudioChannels,
+		&m.AudioCount, &m.NeedsTranscode, &m.UpdatedAt)
 	return m, err
 }
 

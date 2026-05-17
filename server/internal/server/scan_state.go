@@ -46,7 +46,16 @@ type FullTMDb interface {
 
 // NewScanStateForAll runs movies, series and music scans sequentially. The
 // returned ScanResult aggregates movie counts; series/music numbers go to logs.
-func NewScanStateForAll(moviesRoot, seriesRoot, musicRoot string, store *storage.Store, tmdb FullTMDb, prober transcoder.Prober) *ScanState {
+//
+// After each scan succeeds the matching poster cache is warmed: every poster
+// referenced by a row gets pre-downloaded so the server can later run in a
+// network with no TMDb access. Warmers may be nil — in which case the warm
+// step is silently skipped (kept for tests that don't wire up image caches).
+func NewScanStateForAll(
+	moviesRoot, seriesRoot, musicRoot string,
+	store *storage.Store, tmdb FullTMDb, prober transcoder.Prober,
+	posters *PosterCache, seriesPosters *SeriesPosterCache, episodeStills *EpisodeStillCache,
+) *ScanState {
 	var movieTMDb library.TMDbSearcher
 	var tvTMDb library.TMDbTVSearcher
 	if tmdb != nil {
@@ -58,8 +67,30 @@ func NewScanStateForAll(moviesRoot, seriesRoot, musicRoot string, store *storage
 		if err != nil {
 			return res, err
 		}
+		if posters != nil {
+			if rows, err := store.ListMovies(); err == nil {
+				posters.WarmMovies(ctx, rows)
+			}
+		}
 		if _, err := library.ScanSeriesAndUpsert(ctx, seriesRoot, store, tvTMDb, prober, log); err != nil {
 			return res, err
+		}
+		if seriesPosters != nil || episodeStills != nil {
+			seriesList, err := store.ListSeries()
+			if err == nil {
+				if seriesPosters != nil {
+					seriesPosters.WarmSeries(ctx, seriesList)
+				}
+				if episodeStills != nil {
+					var allEpisodes []storage.EpisodeRow
+					for _, sr := range seriesList {
+						if eps, err := store.ListEpisodesBySeries(sr.ID); err == nil {
+							allEpisodes = append(allEpisodes, eps...)
+						}
+					}
+					episodeStills.WarmEpisodes(ctx, allEpisodes)
+				}
+			}
 		}
 		if _, err := library.ScanMusicAndUpsert(ctx, musicRoot, store, log); err != nil {
 			return res, err

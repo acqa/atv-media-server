@@ -1,0 +1,9 @@
+{{ define "body" -}}
+<preview>
+  <paradePreview inOrder="true">
+    {{- range .Data.PosterIDs }}
+    <image>{{ $.BasePath }}/art/{{ . }}.jpg?type=poster&amp;size=w500</image>
+    {{- end }}
+  </paradePreview>
+</preview>
+{{- end }}

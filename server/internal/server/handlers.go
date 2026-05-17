@@ -29,14 +29,19 @@ type MoviesPage struct {
 
 // MoviePage is the payload for movie.xml.
 type MoviePage struct {
-	ID          string
-	Title       string
-	Year        int
-	Description string
-	HasPoster   bool
-	Rating      float64
-	HasRating   bool
-	AudioTracks []int // 0..N-1 — drives the "Audio N" buttons in the detail UI
+	ID            string
+	Title         string
+	Year          int
+	Description   string
+	HasPoster     bool
+	HasBackdrop   bool
+	Rating        float64
+	HasRating     bool
+	RatingPercent int      // 0..100 for the <starRating> widget
+	DurationStr   string   // "1h 47m"; empty when unknown
+	QualityStr    string   // "1080p · H.264 · AC3"; empty when unknown
+	Badges        []string // PNG filenames under /assets/badges/; empty when unknown
+	AudioTracks   []int    // 0..N-1 — drives the "Audio N" buttons in the detail UI
 }
 
 // PlayPage is the payload for player.xml.
@@ -110,14 +115,19 @@ func movieHandler(gen *appletv.XMLGenerator, store *storage.Store) http.HandlerF
 			return
 		}
 		gen.Render(w, r, "movie.xml", MoviePage{
-			ID:          m.ID,
-			Title:       m.Title,
-			Year:        m.Year,
-			Description: m.Description,
-			HasPoster:   m.PosterPath != "" || m.BackdropPath != "",
-			Rating:      m.Rating,
-			HasRating:   m.Rating > 0,
-			AudioTracks: audioRange(m.AudioCount),
+			ID:            m.ID,
+			Title:         m.Title,
+			Year:          m.Year,
+			Description:   m.Description,
+			HasPoster:     m.PosterPath != "" || m.BackdropPath != "",
+			HasBackdrop:   m.BackdropPath != "",
+			Rating:        m.Rating,
+			HasRating:     m.Rating > 0,
+			RatingPercent: RatingPercent(m.Rating),
+			DurationStr:   FormatDuration(m.Duration),
+			QualityStr:    FormatQuality(m.VideoHeight, m.VideoCodec, m.AudioCodec, m.AudioChannels),
+			Badges:        BadgeFilenames(m.VideoHeight, m.VideoCodec, m.AudioCodec, m.AudioChannels),
+			AudioTracks:   audioRange(m.AudioCount),
 		})
 	}
 }

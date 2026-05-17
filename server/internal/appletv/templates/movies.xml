@@ -1,33 +1,31 @@
 {{ define "body" -}}
-<listScrollerSplit id="{{ .BodyID }}">
+<scroller id="{{ .BodyID }}">
   <header>
     <simpleHeader accessibilityLabel="Movies">
       <title>Movies</title>
     </simpleHeader>
   </header>
-  <menu>
-    <sections>
-      <menuSection>
-        <header>
-          <textDivider alignment="left" accessibilityLabel="All movies">
-            <title>All movies</title>
-          </textDivider>
-        </header>
-        <items>
-          {{- range .Data.Movies }}
-          <oneLineMenuItem
-              id="movie-{{ .ID }}"
-              accessibilityLabel="{{ .Title }}"
-              onSelect="atvutils.loadURL('{{ $.BasePath }}/movie.xml?id={{ .ID }}');">
-            <label>{{ .Title }}{{ if .Year }} ({{ .Year }}){{ end }}</label>
-            <preview>
-              <link>{{ $.BasePath }}/movie.xml?id={{ .ID }}</link>
-            </preview>
-          </oneLineMenuItem>
+  <items>
+    <grid columnCount="7" id="movies-grid">
+      <items>
+        {{- range .Data.Movies }}
+        <moviePoster
+            id="movie-{{ .ID }}"
+            alwaysShowTitles="true"
+            onSelect="atvutils.loadURL('{{ $.BasePath }}/movie.xml?id={{ .ID }}');"
+            onPlay="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ .ID }}');">
+          <title>{{ .Title }}</title>
+          {{- if .Year }}
+          <subtitle>{{ .Year }}</subtitle>
           {{- end }}
-        </items>
-      </menuSection>
-    </sections>
-  </menu>
-</listScrollerSplit>
+          {{- if .HasPoster }}
+          <image>{{ $.BasePath }}/art/{{ .ID }}.jpg?type=poster&amp;size=w500</image>
+          {{- end }}
+          <defaultImage>resource://Poster.png</defaultImage>
+        </moviePoster>
+        {{- end }}
+      </items>
+    </grid>
+  </items>
+</scroller>
 {{- end }}

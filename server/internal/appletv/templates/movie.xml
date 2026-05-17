@@ -1,18 +1,69 @@
 {{ define "body" -}}
-<optionList
-    id="{{ .BodyID }}"
-    autoSelectSingleItem="false">
+<itemDetail id="{{ .BodyID }}">
   <title>{{ .Data.Title }}{{ if .Data.Year }} ({{ .Data.Year }}){{ end }}</title>
-  <footnote>{{ if .Data.Description }}{{ .Data.Description }}{{ else }}Description not found.{{ end }}</footnote>
-  <items>
-    {{- range $idx := .Data.AudioTracks }}
-    <oneLineMenuItem
-        id="play-{{ $.Data.ID }}-a{{ $idx }}"
-        accessibilityLabel="Play{{ if gt (len $.Data.AudioTracks) 1 }} (audio {{ $idx }}){{ end }}"
-        onSelect="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ $.Data.ID }}&amp;audio={{ $idx }}');">
-      <label>{{ if gt (len $.Data.AudioTracks) 1 }}Audio {{ $idx }}{{ else }}Play{{ end }}</label>
-    </oneLineMenuItem>
-    {{- end }}
-  </items>
-</optionList>
+  <summary>{{ if .Data.Description }}{{ .Data.Description }}{{ else }}Description not found.{{ end }}</summary>
+
+  {{- if .Data.HasPoster }}
+  <image style="moviePoster">{{ .BasePath }}/art/{{ .Data.ID }}.jpg?type=poster&amp;size=w780</image>
+  {{- else }}
+  <image style="moviePoster">resource://Poster.png</image>
+  {{- end }}
+  <defaultImage>resource://Poster.png</defaultImage>
+
+  {{- if or .Data.DurationStr .Data.QualityStr .Data.Badges .Data.HasRating }}
+  <table>
+    <columnDefinitions>
+      <columnDefinition width="50" alignment="left">
+        <title>Details</title>
+      </columnDefinition>
+    </columnDefinitions>
+    <rows>
+      {{- if .Data.DurationStr }}
+      <row><label>{{ .Data.DurationStr }}</label></row>
+      {{- end }}
+      {{- if .Data.Badges }}
+      <row>
+        <mediaBadges>
+          <additionalMediaBadges>
+            {{- range $idx, $name := .Data.Badges }}
+            <urlBadge insertIndex="{{ $idx }}" required="true" src="{{ $.BasePath }}/assets/badges/{{ $name }}" />
+            {{- end }}
+          </additionalMediaBadges>
+        </mediaBadges>
+      </row>
+      {{- else if .Data.QualityStr }}
+      <row><label>{{ .Data.QualityStr }}</label></row>
+      {{- end }}
+      {{- if .Data.HasRating }}
+      <row>
+        <starRating>
+          <percentage>{{ .Data.RatingPercent }}</percentage>
+        </starRating>
+      </row>
+      {{- end }}
+    </rows>
+  </table>
+  {{- end }}
+
+  <centerShelf>
+    <shelf id="centerShelf" columnCount="{{ len .Data.AudioTracks }}" center="true">
+      <sections>
+        <shelfSection>
+          <items>
+            {{- range $idx := .Data.AudioTracks }}
+            <actionButton
+                id="play-{{ $.Data.ID }}-a{{ $idx }}"
+                onSelect="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ $.Data.ID }}&amp;audio={{ $idx }}');"
+                onPlay="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ $.Data.ID }}&amp;audio={{ $idx }}');">
+              <title>{{ if gt (len $.Data.AudioTracks) 1 }}Audio {{ $idx }}{{ else }}Play{{ end }}</title>
+              <image>resource://Play.png</image>
+              <focusedImage>resource://PlayFocused.png</focusedImage>
+            </actionButton>
+            {{- end }}
+          </items>
+        </shelfSection>
+      </sections>
+    </shelf>
+  </centerShelf>
+</itemDetail>
 {{- end }}

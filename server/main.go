@@ -85,7 +85,16 @@ func main() {
 		tvTMDb = tmdb
 		fullTMDb = tmdb
 	}
-	scanState := server.NewScanStateForAll(moviesRoot, seriesRoot, musicRoot, store, fullTMDb, prober)
+	// Poster caches are created before the initial scan so we can warm them
+	// immediately after each scan completes — turning a one-time fetch from
+	// TMDb into a permanent on-disk copy. After warming the server can run in
+	// networks where image.tmdb.org is unreachable without losing artwork.
+	posters := server.NewPosterCache(filepath.Join(cfg.DataDir, "posters"), store)
+	seriesPosters := server.NewSeriesPosterCache(filepath.Join(cfg.DataDir, "posters"), store)
+	episodeStills := server.NewEpisodeStillCache(filepath.Join(cfg.DataDir, "posters"), store)
+
+	scanState := server.NewScanStateForAll(moviesRoot, seriesRoot, musicRoot, store, fullTMDb, prober,
+		posters, seriesPosters, episodeStills)
 
 	// Initial synchronous scan on startup so the catalogue is populated when
 	// HTTPS comes up.
@@ -94,12 +103,28 @@ func main() {
 	} else {
 		logging.Info(fmt.Sprintf("initial movie scan: total=%d matched=%d skipped=%d probed=%d",
 			res.Total, res.Matched, res.Skipped, res.Probed))
+		if rows, err := store.ListMovies(); err == nil {
+			posters.WarmMovies(context.Background(), rows)
+		}
 	}
 	if sres, err := library.ScanSeriesAndUpsert(context.Background(), seriesRoot, store, tvTMDb, prober, logFn); err != nil {
 		logging.Warn("initial series scan failed:", err)
 	} else {
 		logging.Info(fmt.Sprintf("initial series scan: series=%d episodes=%d matched=%d probed=%d",
 			sres.Series, sres.Episodes, sres.Matched, sres.Probed))
+		if rows, err := store.ListSeries(); err == nil {
+			seriesPosters.WarmSeries(context.Background(), rows)
+		}
+		// Episode stills are warmed in one pass across all series.
+		var allEpisodes []storage.EpisodeRow
+		if seriesList, err := store.ListSeries(); err == nil {
+			for _, sr := range seriesList {
+				if eps, err := store.ListEpisodesBySeries(sr.ID); err == nil {
+					allEpisodes = append(allEpisodes, eps...)
+				}
+			}
+		}
+		episodeStills.WarmEpisodes(context.Background(), allEpisodes)
 	}
 	if mres, err := library.ScanMusicAndUpsert(context.Background(), musicRoot, store, logFn); err != nil {
 		logging.Warn("initial music scan failed:", err)
@@ -107,10 +132,6 @@ func main() {
 		logging.Info(fmt.Sprintf("initial music scan: artists=%d albums=%d tracks=%d",
 			mres.Artists, mres.Albums, mres.Tracks))
 	}
-
-	posters := server.NewPosterCache(filepath.Join(cfg.DataDir, "posters"), store)
-	seriesPosters := server.NewSeriesPosterCache(filepath.Join(cfg.DataDir, "posters"), store)
-	episodeStills := server.NewEpisodeStillCache(filepath.Join(cfg.DataDir, "posters"), store)
 	transcodedDir := filepath.Join(cfg.DataDir, "transcoded")
 	maxBytes := int64(cfg.TranscodeCacheMaxGB) * 1024 * 1024 * 1024
 	go startCacheGC(transcodedDir, maxBytes)

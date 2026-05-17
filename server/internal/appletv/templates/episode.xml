@@ -1,18 +1,62 @@
 {{ define "body" -}}
-<optionList
-    id="{{ .BodyID }}"
-    autoSelectSingleItem="false">
-  <title>{{ .Data.ShowTitle }} — S{{ printf "%02d" .Data.Season }}E{{ printf "%02d" .Data.Episode }}</title>
-  <footnote>{{ if .Data.Description }}{{ .Data.Description }}{{ else if .Data.Title }}{{ .Data.Title }}{{ else }}Description not found.{{ end }}</footnote>
-  <items>
-    {{- range $idx := .Data.AudioTracks }}
-    <oneLineMenuItem
-        id="play-{{ $.Data.ID }}-a{{ $idx }}"
-        accessibilityLabel="Play{{ if gt (len $.Data.AudioTracks) 1 }} (audio {{ $idx }}){{ end }}"
-        onSelect="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ $.Data.ID }}&amp;audio={{ $idx }}');">
-      <label>{{ if gt (len $.Data.AudioTracks) 1 }}Audio {{ $idx }}{{ else }}Play{{ end }}</label>
-    </oneLineMenuItem>
-    {{- end }}
-  </items>
-</optionList>
+<itemDetail id="{{ .BodyID }}">
+  <title>{{ .Data.ShowTitle }} — S{{ printf "%02d" .Data.Season }}E{{ printf "%02d" .Data.Episode }}{{ if .Data.Title }}: {{ .Data.Title }}{{ end }}</title>
+  <summary>{{ if .Data.Description }}{{ .Data.Description }}{{ else }}Description not found.{{ end }}</summary>
+
+  {{- if .Data.HasStill }}
+  <image style="sixteenByNinePoster">{{ .BasePath }}/art-still/{{ .Data.ID }}.jpg?size=w780</image>
+  {{- else }}
+  <image style="sixteenByNinePoster">resource://16x9.png</image>
+  {{- end }}
+  <defaultImage>resource://16x9.png</defaultImage>
+
+  {{- if or .Data.DurationStr .Data.QualityStr .Data.Badges }}
+  <table>
+    <columnDefinitions>
+      <columnDefinition width="50" alignment="left">
+        <title>Details</title>
+      </columnDefinition>
+    </columnDefinitions>
+    <rows>
+      {{- if .Data.DurationStr }}
+      <row><label>{{ .Data.DurationStr }}</label></row>
+      {{- end }}
+      {{- if .Data.Badges }}
+      <row>
+        <mediaBadges>
+          <additionalMediaBadges>
+            {{- range $idx, $name := .Data.Badges }}
+            <urlBadge insertIndex="{{ $idx }}" required="true" src="{{ $.BasePath }}/assets/badges/{{ $name }}" />
+            {{- end }}
+          </additionalMediaBadges>
+        </mediaBadges>
+      </row>
+      {{- else if .Data.QualityStr }}
+      <row><label>{{ .Data.QualityStr }}</label></row>
+      {{- end }}
+    </rows>
+  </table>
+  {{- end }}
+
+  <centerShelf>
+    <shelf id="centerShelf" columnCount="{{ len .Data.AudioTracks }}" center="true">
+      <sections>
+        <shelfSection>
+          <items>
+            {{- range $idx := .Data.AudioTracks }}
+            <actionButton
+                id="play-{{ $.Data.ID }}-a{{ $idx }}"
+                onSelect="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ $.Data.ID }}&amp;audio={{ $idx }}');"
+                onPlay="atvutils.loadAndSwapURL('{{ $.BasePath }}/play.xml?id={{ $.Data.ID }}&amp;audio={{ $idx }}');">
+              <title>{{ if gt (len $.Data.AudioTracks) 1 }}Audio {{ $idx }}{{ else }}Play{{ end }}</title>
+              <image>resource://Play.png</image>
+              <focusedImage>resource://PlayFocused.png</focusedImage>
+            </actionButton>
+            {{- end }}
+          </items>
+        </shelfSection>
+      </sections>
+    </shelf>
+  </centerShelf>
+</itemDetail>
 {{- end }}

@@ -102,8 +102,8 @@ func TestMoviesHandler_EmptyLibrary(t *testing.T) {
 	if err := xml.Unmarshal(body, new(interface{})); err != nil {
 		t.Fatalf("invalid XML: %v\n%s", err, body)
 	}
-	if strings.Contains(string(body), "<oneLineMenuItem") {
-		t.Errorf("empty library produced menu items:\n%s", body)
+	if strings.Contains(string(body), "<moviePoster") {
+		t.Errorf("empty library produced poster items:\n%s", body)
 	}
 }
 
@@ -122,14 +122,33 @@ func TestMoviesHandler_PopulatedListsMovies(t *testing.T) {
 		t.Fatalf("invalid XML: %v\n%s", err, body)
 	}
 	s := string(body)
-	if !strings.Contains(s, `id="movie-abc123def456"`) || !strings.Contains(s, "The Matrix (1999)") {
-		t.Errorf("missing Matrix menu item:\n%s", s)
+	if !strings.Contains(s, "<moviePoster") {
+		t.Errorf("expected <moviePoster> elements in grid:\n%s", s)
 	}
-	if !strings.Contains(s, `id="movie-fedcba987654"`) || !strings.Contains(s, "Inception (2010)") {
-		t.Errorf("missing Inception menu item:\n%s", s)
+	if !strings.Contains(s, `id="movie-abc123def456"`) ||
+		!strings.Contains(s, "<title>The Matrix</title>") ||
+		!strings.Contains(s, "<subtitle>1999</subtitle>") {
+		t.Errorf("missing Matrix poster:\n%s", s)
 	}
+	if !strings.Contains(s, `id="movie-fedcba987654"`) ||
+		!strings.Contains(s, "<title>Inception</title>") ||
+		!strings.Contains(s, "<subtitle>2010</subtitle>") {
+		t.Errorf("missing Inception poster:\n%s", s)
+	}
+	// onSelect drives navigation to /movie.xml; onPlay starts playback directly.
 	if !strings.Contains(s, "/movie.xml?id=abc123def456") {
-		t.Errorf("missing preview link for Matrix:\n%s", s)
+		t.Errorf("missing onSelect link for Matrix:\n%s", s)
+	}
+	if !strings.Contains(s, "/play.xml?id=abc123def456") {
+		t.Errorf("missing onPlay link for Matrix:\n%s", s)
+	}
+	// Poster URL only rendered when the row has poster/backdrop set.
+	if !strings.Contains(s, "/art/abc123def456.jpg?type=poster&amp;size=w500") {
+		t.Errorf("missing poster URL for Matrix (which has poster_path set):\n%s", s)
+	}
+	// Inception has no poster_path/backdrop_path — no <image> tag, only <defaultImage>.
+	if strings.Contains(s, "/art/fedcba987654.jpg") {
+		t.Errorf("unexpected poster URL for Inception (no poster_path):\n%s", s)
 	}
 }
 
@@ -151,6 +170,8 @@ func TestMovieHandler_RendersFullDetails(t *testing.T) {
 	upsertMovie(t, env.store, storage.MediaRow{
 		ID: "xyz000abc111", Title: "Blade Runner", Year: 1982,
 		Description: "Detective hunts replicants", PosterPath: "/p.jpg", Rating: 8.1,
+		Duration: 7020, VideoCodec: "h264", AudioCodec: "ac3",
+		VideoHeight: 1080, AudioChannels: 6,
 	})
 	srv := httptest.NewServer(env.mux)
 	t.Cleanup(srv.Close)
@@ -163,10 +184,27 @@ func TestMovieHandler_RendersFullDetails(t *testing.T) {
 	}
 	s := string(body)
 	for _, want := range []string{
+		"<itemDetail",
 		"Blade Runner",
 		"(1982)",
-		"Detective hunts replicants",
-		"/play.xml?id=xyz000abc111",
+		"<summary>Detective hunts replicants</summary>",
+		`<image style="moviePoster">`,
+		"/art/xyz000abc111.jpg?type=poster&amp;size=w780",
+		"<label>1h 57m</label>",
+		"<mediaBadges>",
+		"<additionalMediaBadges>",
+		`src="https://appletv.redbull.tv/assets/badges/1080.png"`,
+		`src="https://appletv.redbull.tv/assets/badges/h264.png"`,
+		`src="https://appletv.redbull.tv/assets/badges/ac3.png"`,
+		`src="https://appletv.redbull.tv/assets/badges/6.png"`,
+		`insertIndex="0"`,
+		`insertIndex="3"`,
+		"<starRating>",
+		"<percentage>81</percentage>",
+		`<actionButton`,
+		`id="play-xyz000abc111-a0"`,
+		"/play.xml?id=xyz000abc111&amp;audio=0",
+		"<title>Play</title>",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("missing %q in body:\n%s", want, s)
@@ -182,8 +220,81 @@ func TestMovieHandler_NoDescriptionFallback(t *testing.T) {
 	resp, _ := http.Get(srv.URL + "/movie.xml?id=abcabcabc111")
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
-	if !strings.Contains(string(body), "Description not found") {
+	s := string(body)
+	if !strings.Contains(s, "Description not found") {
 		t.Errorf("missing fallback description:\n%s", body)
+	}
+	// Bare row: no poster, no duration, no codecs, no rating — <table> is skipped,
+	// but <image style="moviePoster"> MUST still be emitted (with a resource://
+	// fallback). ATV3 rejects the entire <itemDetail> page with a generic
+	// "sample-xml is currently unavailable" error if the <image> tag is missing.
+	if strings.Contains(s, "<table>") {
+		t.Errorf("expected no <table> when no duration/quality/rating:\n%s", s)
+	}
+	if !strings.Contains(s, `<image style="moviePoster">resource://Poster.png</image>`) {
+		t.Errorf("expected <image> fallback to resource://Poster.png:\n%s", s)
+	}
+	if !strings.Contains(s, "<defaultImage>resource://Poster.png</defaultImage>") {
+		t.Errorf("expected <defaultImage> fallback:\n%s", s)
+	}
+}
+
+func TestMovieHandler_QualityFallbackWhenNoBadges(t *testing.T) {
+	env := newTestEnv(t)
+	// Codecs we don't map (av1, vorbis) — Badges helper returns empty for them,
+	// so the table should fall back to a text <label>.
+	upsertMovie(t, env.store, storage.MediaRow{
+		ID: "fb0000fb0000", Title: "Avant-garde", VideoCodec: "av1", AudioCodec: "vorbis",
+	})
+	srv := httptest.NewServer(env.mux)
+	t.Cleanup(srv.Close)
+
+	resp, _ := http.Get(srv.URL + "/movie.xml?id=fb0000fb0000")
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	if strings.Contains(s, "<mediaBadges>") {
+		t.Errorf("expected no badges for unmapped codecs:\n%s", s)
+	}
+	if !strings.Contains(s, "<label>AV1 · VORBIS</label>") {
+		t.Errorf("expected text quality fallback:\n%s", s)
+	}
+}
+
+func TestMovieHandler_MultipleAudioTracks(t *testing.T) {
+	env := newTestEnv(t)
+	upsertMovie(t, env.store, storage.MediaRow{
+		ID: "aud123aud456", Title: "Multi", AudioCount: 3,
+	})
+	srv := httptest.NewServer(env.mux)
+	t.Cleanup(srv.Close)
+
+	resp, _ := http.Get(srv.URL + "/movie.xml?id=aud123aud456")
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	if err := xml.Unmarshal(body, new(interface{})); err != nil {
+		t.Fatalf("invalid XML: %v\n%s", err, body)
+	}
+	s := string(body)
+	for _, want := range []string{
+		`columnCount="3"`,
+		`id="play-aud123aud456-a0"`,
+		`id="play-aud123aud456-a1"`,
+		`id="play-aud123aud456-a2"`,
+		"/play.xml?id=aud123aud456&amp;audio=0",
+		"/play.xml?id=aud123aud456&amp;audio=1",
+		"/play.xml?id=aud123aud456&amp;audio=2",
+		"<title>Audio 0</title>",
+		"<title>Audio 1</title>",
+		"<title>Audio 2</title>",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("missing %q in body:\n%s", want, s)
+		}
+	}
+	// With multiple tracks, the single-track "Play" label must not appear.
+	if strings.Contains(s, "<title>Play</title>") {
+		t.Errorf("unexpected single-track Play label with multiple audio:\n%s", s)
 	}
 }
 
