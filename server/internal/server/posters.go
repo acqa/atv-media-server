@@ -46,6 +46,12 @@ func NewPosterCache(root string, store *storage.Store) *PosterCache {
 // SetImageBaseURL overrides the upstream base URL — used by tests.
 func (p *PosterCache) SetImageBaseURL(u string) { p.imageBaseURL = u }
 
+// SetHTTP replaces the http.Client used for upstream fetches. main.go uses
+// this to swap in a DoH-aware client on networks that DNS-sinkhole
+// image.tmdb.org; the embedded *PosterCache in SeriesPosterCache and
+// EpisodeStillCache inherits the swap via field promotion.
+func (p *PosterCache) SetHTTP(c *http.Client) { p.http = c }
+
 // allowedSizes is the closed set of TMDb sizes we proxy.
 var allowedSizes = map[string]struct{}{
 	"w300":     {},

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/atv-media-server/server/internal/admin"
 	"github.com/atv-media-server/server/internal/certs"
 	"github.com/atv-media-server/server/internal/config"
+	"github.com/atv-media-server/server/internal/dnsdoh"
 	"github.com/atv-media-server/server/internal/library"
 	"github.com/atv-media-server/server/internal/logging"
 	"github.com/atv-media-server/server/internal/metadata"
@@ -58,9 +60,25 @@ func main() {
 	}
 	defer func() { _ = store.Close() }()
 
+	// Build a DoH-aware HTTP path for TMDb hosts. On networks that
+	// DNS-sinkhole api.themoviedb.org / image.tmdb.org the system resolver
+	// returns loopback and the dials fail with "dial tcp [::1]:443:
+	// connect: connection refused"; DoH resolves them via Cloudflare (with
+	// Quad9 as fallback) and the transport dials the returned IPs directly.
+	// See docs/KNOWN_ISSUES.md §2 for the failure mode this addresses.
+	dohResolver := dnsdoh.NewResolver(dnsdoh.Config{Providers: cfg.DohURL})
+	dohClientTMDb := dnsdoh.NewHTTPClient(dohResolver, 15*time.Second)
+	dohClientPosters := dnsdoh.NewHTTPClient(dohResolver, 30*time.Second)
+	providers := cfg.DohURL
+	if len(providers) == 0 {
+		providers = dnsdoh.DefaultProviders
+	}
+	logging.Info("DoH resolver enabled for TMDb hosts (providers: " + strings.Join(providers, ", ") + ")")
+
 	var tmdb *metadata.Client
 	if cfg.TMDbAPIKey != "" {
 		tmdb = metadata.New(cfg.TMDbAPIKey)
+		tmdb.HTTP = dohClientTMDb
 		logging.Info("TMDb metadata enrichment enabled")
 	} else {
 		logging.Info("TMDB_API_KEY empty — metadata enrichment disabled")
@@ -90,8 +108,11 @@ func main() {
 	// TMDb into a permanent on-disk copy. After warming the server can run in
 	// networks where image.tmdb.org is unreachable without losing artwork.
 	posters := server.NewPosterCache(filepath.Join(cfg.DataDir, "posters"), store)
+	posters.SetHTTP(dohClientPosters)
 	seriesPosters := server.NewSeriesPosterCache(filepath.Join(cfg.DataDir, "posters"), store)
+	seriesPosters.SetHTTP(dohClientPosters)
 	episodeStills := server.NewEpisodeStillCache(filepath.Join(cfg.DataDir, "posters"), store)
+	episodeStills.SetHTTP(dohClientPosters)
 
 	scanState := server.NewScanStateForAll(moviesRoot, seriesRoot, musicRoot, store, fullTMDb, prober,
 		posters, seriesPosters, episodeStills)

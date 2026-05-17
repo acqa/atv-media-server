@@ -125,6 +125,7 @@ Without `ADMIN_USER`/`ADMIN_PASS`, the admin is disabled.
 | `ADMIN_PORT` | `8080` | Admin port (read by docker-compose; not set in `.env.example`). |
 | `HTTP_PORT` / `HTTPS_PORT` | `80` / `443` | Server ports inside the container (mapped 1:1 to the host). |
 | `TRANSCODE_CACHE_MAX_GB` | `50` | HLS segment cache limit. When exceeded, LRU eviction runs. |
+| `DOH_URL` | Cloudflare + Quad9 | DNS-over-HTTPS endpoints (comma-separated) used to resolve `*.themoviedb.org` on networks that DNS-sinkhole them. Tried in order until one yields a non-loopback answer. |
 
 ## What the server does on Play
 
@@ -182,6 +183,7 @@ Either run `docker compose` directly or use the `Makefile` wrappers:
 | `Red Bull TV` hangs on the splash screen | DNS is not hijacked. Check that `Settings → Network → DNS` is set to your IP. |
 | One movie plays, another doesn't | Find the file ID via `/movies.xml` and check `data/transcoded/<id>/`. Server logs will show if ffmpeg crashed. |
 | Cover art doesn't load | `TMDB_API_KEY` is not set. Without it, ATV3 shows the `missing_logo.png` placeholder. |
+| TMDb fetches fail with `dial tcp [::1]:443: connect: connection refused` | The ISP DNS-sinkholes TMDb. The server already uses DoH (Cloudflare → Quad9) by default; if both are blocked on your network, override `DOH_URL` with an endpoint that isn't filtered there. |
 | `MEDIA_SERVER_IP must be set` | You didn't start compose with `.env`. `cp .env.example .env` and fill it in. |
 
 ## Links

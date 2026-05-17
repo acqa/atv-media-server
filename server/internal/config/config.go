@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -20,6 +21,12 @@ type Config struct {
 	AdminPass           string
 	LogToFile           bool
 	LoggingPath         string
+
+	// DohURL is the optional comma-separated list of DNS-over-HTTPS endpoint
+	// URLs used to resolve TMDb hosts (image.tmdb.org, api.themoviedb.org) on
+	// networks that DNS-sinkhole them. Empty → dnsdoh.DefaultProviders
+	// (Cloudflare primary, Quad9 fallback).
+	DohURL []string
 }
 
 // Version is set via -ldflags at build time.
@@ -58,6 +65,13 @@ func Load(getenv func(string) string) (*Config, error) {
 			return nil, errors.New("TRANSCODE_CACHE_MAX_GB must be a positive integer")
 		}
 		c.TranscodeCacheMaxGB = n
+	}
+	if v := getenv("DOH_URL"); v != "" {
+		for _, p := range strings.Split(v, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				c.DohURL = append(c.DohURL, p)
+			}
+		}
 	}
 	if c.MediaPath == "" {
 		return nil, errors.New("MEDIA_PATH is required")

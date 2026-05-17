@@ -119,3 +119,47 @@ func TestCertPath(t *testing.T) {
 		t.Errorf("CertPath: want /certs/redbulltv.cer, got %q", got)
 	}
 }
+
+func TestLoad_DohURL(t *testing.T) {
+	t.Run("unset → empty slice (caller falls back to defaults)", func(t *testing.T) {
+		c, err := Load(envFunc(map[string]string{"MEDIA_PATH": "/m"}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(c.DohURL) != 0 {
+			t.Errorf("want empty, got %v", c.DohURL)
+		}
+	})
+
+	t.Run("single URL", func(t *testing.T) {
+		c, err := Load(envFunc(map[string]string{
+			"MEDIA_PATH": "/m",
+			"DOH_URL":    "https://cloudflare-dns.com/dns-query",
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(c.DohURL) != 1 || c.DohURL[0] != "https://cloudflare-dns.com/dns-query" {
+			t.Errorf("got %v", c.DohURL)
+		}
+	})
+
+	t.Run("comma-separated list with whitespace", func(t *testing.T) {
+		c, err := Load(envFunc(map[string]string{
+			"MEDIA_PATH": "/m",
+			"DOH_URL":    " https://a.example/dns-query , https://b.example/dns-query ,, ",
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"https://a.example/dns-query", "https://b.example/dns-query"}
+		if len(c.DohURL) != len(want) {
+			t.Fatalf("got %v, want %v", c.DohURL, want)
+		}
+		for i, p := range want {
+			if c.DohURL[i] != p {
+				t.Errorf("[%d]: got %q, want %q", i, c.DohURL[i], p)
+			}
+		}
+	})
+}
